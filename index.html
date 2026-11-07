@@ -225,7 +225,7 @@ function vReading() {
     return '<section class="card" style="background:' + color(b) + '">' +
       topbar(tb('#search', 'plus', 'glass'), '<span class="pill glass" style="height:28px;font-size:12px">읽는 중 · ' + (i + 1) + '/' + list.length + '</span>', tb('#book/' + b.id, 'menu', 'glass')) + coverImg(b, 'cover') +
       '<div style="position:relative;margin-top:30px;padding:0 20px">' +
-      '<h1 class="bt" style="margin-right:-40px;white-space:nowrap;overflow:hidden">' + esc(b.title) + '</h1>' +
+      '<h1 class="bt" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden' + (b.title.length > 12 ? ';font-size:34px' : '') + '">' + esc(b.title) + '</h1>' +
       '<p class="au ell">' + esc(b.author) + '</p>' +
       '<p class="mt row"><span style="width:12px;height:12px;border-radius:6px;background:#351E1C;margin-right:6px"></span>' + esc([b.publisher, b.pages ? b.pages + '쪽' : ''].filter(Boolean).join(' · ')) + '</p>' +
       '<div class="row" style="margin-top:24px;gap:16px"><div style="flex:1">' +
@@ -266,7 +266,7 @@ function vLibrary() {
     (q.length ? '<h2 class="st">다음에 읽을 책</h2><div class="hscroll">' + q.map(function (b) { return '<a href="#book/' + b.id + '" style="flex:none;width:96px"><div style="position:relative">' + coverImg(b, '', 'width:96px;height:140px;object-fit:cover;border-radius:4px') + '<span class="circle" style="position:absolute;left:6px;top:6px;width:22px;height:22px;background:#351E1C;color:#fff;font-size:12px;font-weight:800">' + b.queue + '</span></div><div class="ell" style="font-size:12px;margin-top:6px">' + esc(b.title) + '</div></a>'; }).join('') + '</div>' : '') +
     '<div style="padding:32px 20px 4px" class="row"><h2 class="st" style="margin:0;flex:1">' + (L.tag ? esc(L.tag) + ' · ' : '') + ST[L.status] + ' ' + list.length + '</h2>' +
     (L.tag ? '<button class="chip" data-act="libTag" data-tag="">분류 해제</button>' : '') +
-    (SEL ? '<button class="chip" data-act="selAll" style="margin-left:6px">' + (nSel && nSel === list.length ? '모두 해제' : '모두 선택') + '</button><button class="chip on" data-act="selCancel" style="margin-left:6px">완료</button>'
+    (SEL ? '<button class="chip" id="selAllBtn" data-act="selAll" style="margin-left:6px">' + (nSel && nSel === list.length ? '모두 해제' : '모두 선택') + '</button><button class="chip on" data-act="selCancel" style="margin-left:6px">완료</button>'
       : (list.length ? '<button class="chip" data-act="selStart" style="margin-left:6px">선택</button>' : '')) + '</div>' +
     '<div style="padding:6px 20px"><input class="field" style="background:#4D2F2C;color:#fff;height:44px;padding:0 16px;font-size:15px" placeholder="서재에서 찾기" value="' + esc(L.q) + '" data-input="libQ"></div>' +
     '<div>' + (list.length ? list.slice(0, 300).map(function (b) {
@@ -275,7 +275,7 @@ function vLibrary() {
       if (SEL) return '<button class="item" style="width:100%" data-act="selToggle" data-id="' + b.id + '"><span class="chk ' + (SEL[b.id] ? 'on' : '') + '">' + (SEL[b.id] ? '✓' : '') + '</span>' + inner + '</button>';
       return '<a class="item" href="#book/' + b.id + '">' + inner + '</a>';
     }).join('') : '<p class="muted" style="padding:20px;font-size:15px">여기에 해당하는 책이 없어요.</p>') + '</div>' +
-    '<div style="height:' + (SEL ? 150 : 80) + 'px"></div></div>' + (SEL ? '<div class="selbar"><b style="flex:1;font-size:15px;padding-left:6px">' + nSel + '권 선택</b>' +
+    '<div style="height:' + (SEL ? 150 : 80) + 'px"></div></div>' + (SEL ? '<div class="selbar"><b id="selN" style="flex:1;font-size:15px;padding-left:6px">' + nSel + '권 선택</b>' +
       '<button class="pill" style="height:40px;background:#fff" data-act="selTag">분류</button><button class="pill" style="height:40px;background:#fff" data-act="selStatus">상태</button>' +
       '<button class="pill" style="height:40px;background:#351E1C;color:#F5F4ED" data-act="selDelete">지우기</button></div>' : mini()) + tabs('library');
 }
@@ -495,6 +495,7 @@ function manualSheet() {
   openSheet(sheetHead(null, '직접 입력') + '<form data-form="manual">' +
     ['title|제목 *', 'author|저자', 'publisher|출판사', 'pages|전체 쪽수'].map(function (s) { var p = s.split('|'); return '<input class="field" name="' + p[0] + '" placeholder="' + p[1] + '" style="margin-top:10px" ' + (p[0] === 'pages' ? 'inputmode="numeric"' : '') + (p[0] === 'title' ? ' required' : '') + '>'; }).join('') +
     '<div class="row" style="gap:6px;margin-top:14px">' + ['want', 'reading', 'done'].map(function (k) { return '<label class="pill" style="background:#fff;flex:1;height:44px"><input type="radio" name="status" value="' + k + '" ' + (k === 'want' ? 'checked' : '') + '> ' + ST[k] + '</label>'; }).join('') + '</div>' +
+    '<label style="display:block;margin-top:10px"><span style="font-size:12px;color:#5E5A54">완독일 (다 읽음일 때, 모르면 비워 두세요)</span><input class="field" type="date" name="endDate" style="margin-top:6px"></label>' +
     '<button class="btn" style="margin-top:16px">서재에 넣기</button></form>');
 }
 function askSheet(title, label, value, cb) {
@@ -509,6 +510,7 @@ function confirmSheet(msg, yes, cb, no) {
 /* ---------- 동작 ---------- */
 var ACT = {
   closeSheet: closeSheet,
+  doneUnknown: function () { var cb = S._done; closeSheet(); if (cb) cb(''); },
   back: goBack,
   pageSheet: function (d) { pageSheet(d.id); },
   quoteSheet: function (d) { quoteSheet(d.id); },
@@ -524,8 +526,8 @@ var ACT = {
   libStatus: function (d) { S.lib.status = d.st; S.sel = S.sel ? {} : null; render(); },
   selStart: function () { S.sel = {}; render(); },
   selCancel: function () { S.sel = null; render(); },
-  selToggle: function (d) { if (S.sel[d.id]) delete S.sel[d.id]; else S.sel[d.id] = 1; var y = window.scrollY; render(); window.scrollTo(0, y); },
-  selAll: function () { var ids = S._libList || [], all = ids.length && ids.every(function (i) { return S.sel[i]; }); S.sel = {}; if (!all) ids.forEach(function (i) { S.sel[i] = 1; }); var y = window.scrollY; render(); window.scrollTo(0, y); },
+  selToggle: function (d) { if (S.sel[d.id]) delete S.sel[d.id]; else S.sel[d.id] = 1; selPaint(); },
+  selAll: function () { var ids = S._libList || [], all = ids.length && ids.every(function (i) { return S.sel[i]; }); S.sel = {}; if (!all) ids.forEach(function (i) { S.sel[i] = 1; }); selPaint(); },
   selTag: function () {
     var n = Object.keys(S.sel).length; if (!n) { toast('책을 먼저 고르세요'); return; }
     openSheet(sheetHead(null, n + '권에 분류 붙이기') + '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:18px">' + S.tags.map(function (t) { return '<button class="pill" style="height:38px;background:#fff" data-act="selTagApply" data-tag="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div>' +
@@ -538,7 +540,13 @@ var ACT = {
     var n = Object.keys(S.sel).length; if (!n) { toast('책을 먼저 고르세요'); return; }
     openSheet(sheetHead(null, n + '권 상태 바꾸기') + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px">' + Object.keys(ST).map(function (k) { return '<button class="pill" style="height:48px;background:#fff" data-act="selStatusApply" data-st="' + k + '">' + ST[k] + '</button>'; }).join('') + '</div>');
   },
-  selStatusApply: function (d) { closeSheet(); bulkSave(Object.keys(S.sel).map(function (id) { return { id: id, patch: { status: d.st, queue: '' } }; }), ST[d.st] + '(으)로 바꿨어요'); },
+  selStatusApply: function (d) {
+    var ids = Object.keys(S.sel);
+    if (d.st !== 'done') { closeSheet(); bulkSave(ids.map(function (id) { return { id: id, patch: { status: d.st, queue: '' } }; }), ST[d.st] + '(으)로 바꿨어요'); return; }
+    doneSheet(ids.length + '권을 다 읽음으로', S.today, function (dt) {
+      bulkSave(ids.map(function (id) { var b = book(id) || {}; return { id: id, patch: { status: 'done', queue: '', endDate: dt, currentPage: b.pages || b.currentPage || '' } }; }), '다 읽음으로 바꿨어요');
+    });
+  },
   selDelete: function () {
     var ids = Object.keys(S.sel); if (!ids.length) { toast('책을 먼저 고르세요'); return; }
     confirmSheet(ids.length + '권을 지울까요?<br><span style="font-size:15px;font-weight:500">그 책의 문장과 쪽수 기록도 함께 지워지고, 되돌릴 수 없어요.</span>', '지우기', function () {
@@ -552,7 +560,10 @@ var ACT = {
   lineSel: function (d) { S.lines.idx = num(d.i); render(); },
   shuffle: function () { var n = document.querySelectorAll('[data-act="lineSel"]').length; if (n) { S.lines.idx = Math.floor(Math.random() * n); render(); } },
   tagSel: function (d) { S.tagSel = d.tag; render(); },
-  setStatus: function (d) { saveBook(d.id, { status: d.st }).then(function (b) { if (d.st === 'done') afterDone(b); }); },
+  setStatus: function (d) {
+    if (d.st !== 'done') { saveBook(d.id, { status: d.st }); return; }
+    var b = book(d.id); doneSheet('「' + b.title + '」', b.endDate, function (dt) { saveBook(d.id, { status: 'done', endDate: dt }).then(afterDone); });
+  },
   setColor: function (d) { closeSheet(); saveBook(d.id, { color: d.c }); },
   startBook: function (d) { saveBook(d.id, { status: 'reading' }); },
   toggleQueue: function (d) {
@@ -575,7 +586,10 @@ var ACT = {
     });
   },
   addBook: function (d) {
-    var it = Object.assign({}, S.search.items[num(d.i)], { status: d.st }); toast('넣는 중…');
+    var it = Object.assign({}, S.search.items[num(d.i)], { status: d.st });
+    if (d.st === 'done' && !d.dated) { doneSheet('「' + it.title + '」', S.today, function (dt) { ACT.addBook(Object.assign({}, d, { dated: 1, dt: dt })); }); return; }
+    if (d.st === 'done') it.endDate = d.dt || '';
+    toast('넣는 중…');
     call('addBook', it).then(function (r) { replace(S.books, r.book); toast(r.duplicate ? '이미 서재에 있어요' : ST[d.st] + '(으)로 넣었어요'); go(d.st === 'reading' ? 'reading' : 'book/' + r.book.id); }).catch(fail);
   },
   barcode: function () {
@@ -602,6 +616,7 @@ function bulkTag(fn, msg) {
   bulkSave(Object.keys(S.sel).map(function (id) { return { id: id, patch: { tags: fn(tagsOf(book(id))).join('|') } }; }), msg);
 }
 var FORM = {
+  done: function (f) { var v = f.d.value, cb = S._done; closeSheet(); if (cb) cb(v); },
   selTagNew: function (f) { var v = f.t.value.trim(); if (!v) return; call('tagAdd', v).then(function (t) { S.tags = t; ACT.selTagApply({ tag: v }); }).catch(fail); },
   search: function () { S.search.q = document.getElementById('sq').value; doSearch(); },
   page: function (f) {
@@ -627,6 +642,7 @@ var FORM = {
   },
   manual: function (f) {
     var b = { title: f.title.value.trim(), author: f.author.value.trim(), publisher: f.publisher.value.trim(), pages: f.pages.value.trim(), status: f.status.value, source: '직접' };
+    if (b.status === 'done') b.endDate = f.endDate.value;
     closeSheet(); call('addBook', b).then(function (r) { replace(S.books, r.book); go('book/' + r.book.id); }).catch(fail);
   },
   ask: function (f) { var v = f.v.value.trim(), cb = S._ask; closeSheet(); if (v && cb) cb(v); }
@@ -636,7 +652,21 @@ function saveBook(id, patch) {
   var b = book(id); Object.assign(b, patch); render();
   return call('updateBook', id, patch).then(function (nb) { replace(S.books, nb); render(); return nb; }).catch(function (e) { fail(e); });
 }
-function askDone(b) { confirmSheet('「' + esc(b.title) + '」<br>다 읽음으로 바꿀까요?', '다 읽었어요', function () { saveBook(b.id, { status: 'done' }).then(afterDone); }); }
+function askDone(b) { doneSheet('「' + b.title + '」 다 읽음으로 바꿀까요?', b.endDate, function (dt) { saveBook(b.id, { status: 'done', endDate: dt }).then(afterDone); }); }
+/* 선택 표시만 그 자리에서 바꾼다(전체를 다시 그리면 표지가 다시 불려 와 깜빡인다) */
+function selPaint() {
+  document.querySelectorAll('[data-act="selToggle"]').forEach(function (el) { var on = !!S.sel[el.dataset.id], c = el.querySelector('.chk'); c.className = 'chk' + (on ? ' on' : ''); c.textContent = on ? '✓' : ''; });
+  var n = Object.keys(S.sel).length, ids = S._libList || [], e = document.getElementById('selN'), a = document.getElementById('selAllBtn');
+  if (e) e.textContent = n + '권 선택';
+  if (a) a.textContent = n && n === ids.length ? '모두 해제' : '모두 선택';
+}
+/* 다 읽음으로 바꿀 때 완독일 묻기 */
+function doneSheet(title, def, cb) {
+  S._done = cb;
+  openSheet(sheetHead(null, '다 읽음') + '<div class="h900" style="font-size:22px;line-height:1.35;margin-top:16px">' + esc(title) + '</div>' +
+    '<form data-form="done"><label style="display:block;margin-top:16px"><span style="font-size:12px;color:#5E5A54">언제 다 읽었나요?</span><input class="field" type="date" name="d" value="' + esc(def || S.today) + '" style="margin-top:6px"></label>' +
+    '<button class="btn" style="margin-top:14px">저장</button></form><button class="btn" style="margin-top:8px;background:#fff;color:#351E1C" data-act="doneUnknown">날짜 모름</button>');
+}
 function afterDone(b) {
   var n = queue()[0];
   if (n) confirmSheet('다음 책<br>「' + esc(n.title) + '」<br>시작할까요?', '시작하기', function () { saveBook(n.id, { status: 'reading' }); go('reading'); }, '나중에');
