@@ -261,8 +261,8 @@ function vLibrary() {
     '<h1 class="pt">내 서재</h1>' +
     '<div class="hscroll" style="margin-top:16px">' + Object.keys(ST).map(function (k) { return '<button class="chip ' + (L.status === k ? 'on' : '') + '" data-act="libStatus" data-st="' + k + '">' + ST[k] + ' <b>' + cnt[k] + '</b></button>'; }).join('') + '</div>' +
     '<div class="hscroll" style="margin-top:20px">' +
-    '<a class="tile" href="#lines" style="background:var(--lime)">' + ic('quote', 24) + '<span><span class="h900" style="font-size:22px;display:block">모은 문장</span><span style="font-size:12px;font-weight:700">' + S.quotes.length + '개</span></span></a>' +
-    tagTiles + '<a class="tile" href="#tags" style="background:#4D2F2C;color:#fff;border:1.5px dashed #7A5A55">' + ic('plus', 22) + '<span class="h900" style="font-size:22px">분류 관리</span></a></div>' +
+    '<a class="tile" href="#lines" style="background:var(--lime)"><span class="row" style="gap:6px;font-size:12px;font-weight:800">' + ic('quote', 14) + S.quotes.length + '개</span><span class="h900" style="font-size:22px;line-height:1.15">모은 문장</span></a>' +
+    tagTiles + '<a class="tile" href="#tags" style="background:#4D2F2C;color:#F5F4ED;border:1.5px dashed #7A5A55"><span class="row" style="gap:6px;font-size:12px;font-weight:800">' + ic('plus', 14) + S.tags.length + '개</span><span class="h900" style="font-size:22px;line-height:1.15">분류 관리</span></a></div>' +
     (q.length ? '<h2 class="st">다음에 읽을 책</h2><div class="hscroll">' + q.map(function (b) { return '<a href="#book/' + b.id + '" style="flex:none;width:96px"><div style="position:relative">' + coverImg(b, '', 'width:96px;height:140px;object-fit:cover;border-radius:4px') + '<span class="circle" style="position:absolute;left:6px;top:6px;width:22px;height:22px;background:#351E1C;color:#fff;font-size:12px;font-weight:800">' + b.queue + '</span></div><div class="ell" style="font-size:12px;margin-top:6px">' + esc(b.title) + '</div></a>'; }).join('') + '</div>' : '') +
     '<div style="padding:32px 20px 4px" class="row"><h2 class="st" style="margin:0;flex:1">' + (L.tag ? esc(L.tag) + ' · ' : '') + ST[L.status] + ' ' + list.length + '</h2>' +
     (L.tag ? '<button class="chip" data-act="libTag" data-tag="">분류 해제</button>' : '') +
@@ -284,9 +284,9 @@ function vLibrary() {
 function vBook(id) {
   var b = book(id); if (!b) return '<div class="loading">책을 찾지 못했어요 · <a href="#library" style="text-decoration:underline;margin-left:6px">서재로</a></div>' + tabs('library');
   var c = color(b), p = pct(b), qs = quotesOf(b.id), logs = S.logs.filter(function (l) { return l.bookId === b.id; }).sort(function (a, x) { return x.date > a.date ? 1 : -1; });
-  document.body.style.background = c;
+  document.body.style.background = '#351E1C';
   var stBtns = Object.keys(ST).map(function (k) { return '<button class="pill" data-act="setStatus" data-id="' + b.id + '" data-st="' + k + '" style="height:36px;font-size:12px;background:' + (b.status === k ? '#351E1C;color:#fff' : 'rgba(255,255,255,.65)') + '">' + ST[k] + '</button>'; }).join('');
-  return '<div style="background:' + c + ';color:#351E1C;position:relative;overflow:hidden;min-height:100vh">' +
+  return '<div style="background:' + c + ';color:#351E1C;position:relative;overflow:hidden">' +
     topbar(tb('back', 'back', 'glass'), '', '<button data-act="editSheet" data-id="' + b.id + '" class="pill glass" style="height:34px;font-size:12px">정보 수정</button>') + coverImg(b, 'cover') +
     '<section style="position:relative;margin-top:30px;padding:0 20px 28px">' +
     '<div class="row" style="gap:6px;flex-wrap:wrap">' + stBtns + '</div>' +
@@ -325,7 +325,7 @@ function vLines(id) {
   var qs = b ? quotesOf(b.id) : S.quotes.slice().sort(function (a, x) { return x.createdAt > a.createdAt ? 1 : -1; });
   var bg = b ? color(b) : '#FF6037';
   document.body.style.background = bg;
-  if (S.lines.book !== (id || '')) { S.lines.book = id || ''; S.lines.idx = 0; }
+  if (S.lines.book !== (id || '')) { S.lines.book = id || ''; S.lines.idx = -1; }
   var idx = Math.min(S.lines.idx, Math.max(0, qs.length - 1));
   var withQ = S.books.filter(function (x) { return S.quotes.some(function (q) { return q.bookId === x.id; }); }).sort(function (a, x) { return lastAct(x) > lastAct(a) ? 1 : -1; }).slice(0, 15);
   var body = qs.length ? qs.map(function (q, i) {
@@ -373,7 +373,7 @@ function vWrapped() {
   return '<div style="background:#F5F4ED;color:#351E1C;min-height:100vh">' +
     '<section style="background:#351E1C;color:#F5F4ED;padding:0 0 40px;clip-path:' + zigR + '">' + topbar('', '', '') +
     '<h1 class="pt" style="color:#FF6037;margin-right:64px">' + y + '년,<br>다 읽었다.</h1>' +
-    '<div class="row" style="gap:6px;flex-wrap:wrap;margin:16px 64px 0 20px">' + ys.map(function (k) { return '<button class="pill" data-act="year" data-y="' + k + '" style="height:30px;font-size:12px;background:' + (k === y ? '#FF6037;color:#351E1C' : 'rgba(245,244,237,.15);color:#F5F4ED') + '">' + k + '</button>'; }).join('') + '</div>' +
+    '<div class="hscroll" style="gap:6px;margin:16px 0 0;padding-right:64px">' + ys.map(function (k) { return '<button class="pill" data-act="year" data-y="' + k + '" style="height:30px;font-size:12px;background:' + (k === y ? '#FF6037;color:#351E1C' : 'rgba(245,244,237,.15);color:#F5F4ED') + '">' + k + '</button>'; }).join('') + '</div>' +
     '<p style="margin:16px 64px 0 20px;font-size:15px;line-height:1.6">' + y + '년에 다 읽은 책과 남긴 문장을 모았어요.</p></section>' +
     '<section style="padding:40px 20px">' + H(y + '년을<br>숫자로', '#733635') +
     big(done.length, '권을 다 읽었다') + big(pages.toLocaleString(), '쪽을 넘겼다' + (withP < done.length ? ' (쪽수가 적힌 ' + withP + '권 기준)' : '')) + big(qY.length, '개의 문장을 남겼다') + '</section>' +
@@ -557,7 +557,7 @@ var ACT = {
   },
   libTag: function (d) { S.lib.tag = S.lib.tag === d.tag ? '' : d.tag; render(); },
   year: function (d) { S.year = d.y; render(); },
-  lineSel: function (d) { S.lines.idx = num(d.i); render(); },
+  lineSel: function (d, el) { if (e_inBtn(el)) return; S.lines.idx = S.lines.idx === num(d.i) ? -1 : num(d.i); render(); },
   shuffle: function () { var n = document.querySelectorAll('[data-act="lineSel"]').length; if (n) { S.lines.idx = Math.floor(Math.random() * n); render(); } },
   tagSel: function (d) { S.tagSel = d.tag; render(); },
   setStatus: function (d) {
@@ -654,6 +654,7 @@ function saveBook(id, patch) {
 }
 function askDone(b) { doneSheet('「' + b.title + '」 다 읽음으로 바꿀까요?', b.endDate, function (dt) { saveBook(b.id, { status: 'done', endDate: dt }).then(afterDone); }); }
 /* 선택 표시만 그 자리에서 바꾼다(전체를 다시 그리면 표지가 다시 불려 와 깜빡인다) */
+function e_inBtn(el) { return false; }
 function selPaint() {
   document.querySelectorAll('[data-act="selToggle"]').forEach(function (el) { var on = !!S.sel[el.dataset.id], c = el.querySelector('.chk'); c.className = 'chk' + (on ? ' on' : ''); c.textContent = on ? '✓' : ''; });
   var n = Object.keys(S.sel).length, ids = S._libList || [], e = document.getElementById('selN'), a = document.getElementById('selAllBtn');
