@@ -304,7 +304,11 @@ function vBook(id) {
     '<div class="row" style="gap:6px;flex-wrap:wrap">' + stBtns + '</div>' +
     '<h1 class="bt" style="margin-top:16px">' + esc(b.title) + '</h1>' +
     '<p class="au">' + esc(b.author) + '</p>' +
-    '<p class="mt">' + esc([b.publisher, b.pages ? b.pages + '쪽' : '쪽수 없음', b.startDate ? b.startDate + ' 시작' : '', b.endDate ? b.endDate + ' 완독' : ''].filter(Boolean).join(' · ')) + '</p>' +
+    '<p class="mt">' + esc(b.publisher || '') + '</p>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px">' +
+    '<button class="pill glass" style="height:34px;font-size:12px" data-act="fieldSheet" data-id="' + b.id + '" data-f="startDate">시작 ' + (b.startDate || '—') + ' ✎</button>' +
+    (b.status === 'done' ? '<button class="pill glass" style="height:34px;font-size:12px" data-act="fieldSheet" data-id="' + b.id + '" data-f="endDate">완독 ' + (b.endDate || '—') + ' ✎</button>' : '') +
+    '<button class="pill glass" style="height:34px;font-size:12px" data-act="fieldSheet" data-id="' + b.id + '" data-f="pages">전체 ' + (b.pages ? b.pages + '쪽' : '쪽수 없음') + ' ✎</button></div>' +
     '<div class="row" style="gap:2px;margin-top:14px">' + [1, 2, 3, 4, 5].map(function (k) { var v = parseFloat(b.rating) || 0; return '<button data-act="rate" data-id="' + b.id + '" data-n="' + k + '" aria-label="별 ' + k + '개" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center">' + oneStar(v >= k ? 1 : v >= k - 0.5 ? 0.5 : 0, 30) + '</button>'; }).join('') +
     '<span style="font-size:12px;font-weight:700;margin-left:8px">' + (parseFloat(b.rating) ? b.rating + ' / 5' : '별을 눌러 별점 주기') + '</span></div>' +
     '<div class="scrub" style="margin-top:20px"><i style="width:' + p + '%"></i></div>' +
@@ -521,7 +525,8 @@ function pageSheet(id) {
     '<div class="kr" style="margin-top:28px;font-size:15px;font-weight:500">몇 쪽까지 읽었나요?</div>' +
     '<form data-form="page" data-id="' + id + '"><div class="row" style="align-items:baseline;gap:8px"><input id="pgIn" name="p" type="number" inputmode="numeric" value="' + (num(b.currentPage) || '') + '" style="width:230px;border:0;outline:0;background:transparent;font-weight:200;font-size:110px;letter-spacing:-6px;line-height:1"><span style="font-size:22px;font-weight:500">쪽</span></div>' +
     '<div class="row" style="gap:6px;margin:18px 0 22px;flex-wrap:wrap">' + [10, 20, 50].map(function (n) { return '<button type="button" class="btn2" data-act="pgAdd" data-n="' + n + '">+' + n + '</button>'; }).join('') + (b.pages ? '<button type="button" class="btn2" data-act="pgEnd" data-n="' + b.pages + '">끝까지</button>' : '') + '</div>' +
-    '<button class="btn">저장</button></form>');
+    '<button class="btn">저장</button></form>' +
+    '<button class="btn" style="margin-top:8px;background:#fff;color:#351E1C;font-size:14px;height:46px" data-act="fieldSheet" data-id="' + id + '" data-f="pages">전체 ' + (b.pages ? b.pages + '쪽' : '쪽수') + ' 바꾸기 (이북리더기 등)</button>');
   setTimeout(function () { var i = document.getElementById('pgIn'); i.focus(); i.select(); }, 50);
 }
 function quoteSheet(id, photo) {
@@ -575,6 +580,8 @@ function confirmSheet(msg, yes, cb, no) {
 /* ---------- 동작 ---------- */
 var ACT = {
   closeSheet: closeSheet,
+  fieldSheet: function (d) { fieldSheet(d.id, d.f); },
+  fieldClear: function (d) { var p = {}; p[d.f] = ''; closeSheet(); saveBook(d.id, p); },
   doneUnknown: function () { var cb = S._done; closeSheet(); if (cb) cb(''); },
   back: goBack,
   pageSheet: function (d) { pageSheet(d.id); },
@@ -668,6 +675,7 @@ var ACT = {
   },
   tagSel: function (d) { S.tagSel = d.tag; render(); },
   setStatus: function (d) {
+    if (d.st === 'reading') { var br = book(d.id); startSheet('「' + br.title + '」', br.startDate, function (dt) { saveBook(d.id, { status: 'reading', startDate: dt }); }); return; }
     if (d.st !== 'done') { saveBook(d.id, { status: d.st }); return; }
     var b = book(d.id); doneSheet('「' + b.title + '」', b.endDate, function (dt) { saveBook(d.id, { status: 'done', endDate: dt }).then(afterDone); });
   },
@@ -723,6 +731,11 @@ function bulkTag(fn, msg) {
   bulkSave(Object.keys(S.sel).map(function (id) { return { id: id, patch: { tags: fn(tagsOf(book(id))).join('|') } }; }), msg);
 }
 var FORM = {
+  field: function (f) {
+    var id = f.dataset.id, k = f.dataset.f, v = f.v.value.trim(), patch = {}; patch[k] = v;
+    if (k === 'pages') { var b = book(id); if (b.status === 'done') patch.currentPage = v; }
+    closeSheet(); saveBook(id, patch);
+  },
   done: function (f) { var v = f.d.value, cb = S._done; closeSheet(); if (cb) cb(v); },
   selTagNew: function (f) { var v = f.t.value.trim(); if (!v) return; call('tagAdd', v).then(function (t) { S.tags = t; ACT.selTagApply({ tag: v }); }).catch(fail); },
   search: function () { S.search.q = document.getElementById('sq').value; doSearch(); },
@@ -769,6 +782,19 @@ function selPaint() {
   if (a) a.textContent = n && n === ids.length ? '모두 해제' : '모두 선택';
 }
 /* 다 읽음으로 바꿀 때 완독일 묻기 */
+function fieldSheet(id, f) {
+  var b = book(id), lab = { startDate: '언제부터 읽었나요?', endDate: '언제 다 읽었나요?', pages: '전체 몇 쪽인가요?' }[f], isDate = f !== 'pages';
+  openSheet(sheetHead(b, f === 'pages' ? '이북리더기는 기기에 나오는 전체 쪽수로 맞추세요' : '') +
+    '<form data-form="field" data-id="' + id + '" data-f="' + f + '"><label style="display:block;margin-top:18px"><span style="font-size:12px;color:#5E5A54">' + lab + '</span>' +
+    '<input class="field" name="v" ' + (isDate ? 'type="date"' : 'type="number" inputmode="numeric"') + ' value="' + esc(b[f] || (isDate ? S.today : '')) + '" style="margin-top:6px"></label>' +
+    '<button class="btn" style="margin-top:14px">저장</button></form>' + (isDate ? '<button class="btn" style="margin-top:8px;background:#fff;color:#351E1C" data-act="fieldClear" data-id="' + id + '" data-f="' + f + '">날짜 모름 (비우기)</button>' : ''));
+}
+function startSheet(title, def, cb) {
+  S._done = cb;
+  openSheet(sheetHead(null, '읽는 중') + '<div class="h900" style="font-size:22px;line-height:1.35;margin-top:16px">' + esc(title) + '</div>' +
+    '<form data-form="done"><label style="display:block;margin-top:16px"><span style="font-size:12px;color:#5E5A54">언제부터 읽었나요?</span><input class="field" type="date" name="d" value="' + esc(def || S.today) + '" style="margin-top:6px"></label>' +
+    '<button class="btn" style="margin-top:14px">저장</button></form><button class="btn" style="margin-top:8px;background:#fff;color:#351E1C" data-act="doneUnknown">날짜 모름</button>');
+}
 function doneSheet(title, def, cb) {
   S._done = cb;
   openSheet(sheetHead(null, '다 읽음') + '<div class="h900" style="font-size:22px;line-height:1.35;margin-top:16px">' + esc(title) + '</div>' +
