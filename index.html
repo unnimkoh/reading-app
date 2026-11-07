@@ -327,9 +327,14 @@ function dayHash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 
 function vAlbums() {
   var bg = '#FF6037'; document.body.style.background = bg;
   var Lq = S.lines, q = (Lq.q || '').trim().toLowerCase(), sort = Lq.sort || 'many';
-  var cnt = {}, last = {}, yc = {}, Y = Lq.year || '';
-  S.quotes.forEach(function (x) { var y = (x.createdAt || '').slice(0, 4); if (y) yc[y] = (yc[y] || 0) + 1; });
-  S.quotes.filter(function (x) { return !Y || (x.createdAt || '').slice(0, 4) === Y; }).forEach(function (x) { cnt[x.bookId] = (cnt[x.bookId] || 0) + 1; if (!last[x.bookId] || x.createdAt > last[x.bookId]) last[x.bookId] = x.createdAt || ''; });
+  var cnt = {}, last = {}, yc = {}, tc = {}, Y = Lq.year || '', T = Lq.tag || '';
+  var tagOK = function (x) { var t = tagsOf(book(x.bookId) || {}); return !T || (T === '__none' ? !t.length : t.indexOf(T) >= 0); };
+  var yearOK = function (x) { return !Y || (x.createdAt || '').slice(0, 4) === Y; };
+  S.quotes.forEach(function (x) {
+    var y = (x.createdAt || '').slice(0, 4); if (y && tagOK(x)) yc[y] = (yc[y] || 0) + 1;
+    if (yearOK(x)) { var t = tagsOf(book(x.bookId) || {}); if (!t.length) tc.__none = (tc.__none || 0) + 1; t.forEach(function (g) { tc[g] = (tc[g] || 0) + 1; }); }
+  });
+  S.quotes.filter(function (x) { return yearOK(x) && tagOK(x); }).forEach(function (x) { cnt[x.bookId] = (cnt[x.bookId] || 0) + 1; if (!last[x.bookId] || x.createdAt > last[x.bookId]) last[x.bookId] = x.createdAt || ''; });
   var bs = S.books.filter(function (x) { return cnt[x.id]; });
   bs.sort(function (a, x) { return sort === 'many' ? (cnt[x.id] - cnt[a.id]) : (last[x.id] > last[a.id] ? 1 : -1); });
   var today = S.quotes.length ? (Lq.pick ? S.quotes.find(function (x) { return x.id === Lq.pick; }) : S.quotes[dayHash(S.today) % S.quotes.length]) : null;
@@ -349,7 +354,10 @@ function vAlbums() {
       var xb = book(x.bookId) || {};
       return '<button data-act="openQuote" data-id="' + x.id + '" style="display:block;width:100%;text-align:left;padding:14px 0;border-bottom:1px solid rgba(53,30,28,.18)"><div style="font-size:12px;font-weight:700;opacity:.65;margin-bottom:4px">' + esc([xb.title, x.page ? x.page + '쪽' : ''].filter(Boolean).join(' · ')) + '</div><p class="clamp3" style="margin:0;font-size:15px;font-weight:700;line-height:1.6">' + esc(cleanQ(x.text)) + '</p></button>';
     }).join('') : '<p style="font-size:15px">찾는 글자가 들어간 문장이 없어요.</p>') + '</div>';
-  } else body = '<h2 class="st">' + (Y ? Y + '년에 남긴 문장 · ' : '') + bs.length + '권</h2>' + grid(bs);
+  } else {
+    var nq = 0; bs.forEach(function (x) { nq += cnt[x.id]; });
+    body = '<h2 class="st">' + [T ? (T === '__none' ? '분류 없음' : T) : '', Y ? Y + '년' : ''].filter(Boolean).join(' · ') + (T || Y ? ' — ' : '') + bs.length + '권 · 문장 ' + nq + '</h2>' + grid(bs);
+  }
   return '<div style="background:' + bg + ';min-height:100vh;color:#351E1C">' +
     topbar('', '', tb('shuffle', 'shuffle', 'glass'), bg) +
     '<h1 class="pt">문장 <span style="opacity:.45">' + S.quotes.length + '</span></h1>' +
@@ -358,6 +366,7 @@ function vAlbums() {
       '<div class="row" style="justify-content:space-between;font-size:12px;font-weight:800;color:#FF6037"><span>' + (Lq.pick ? '골라 본 문장' : '오늘의 문장') + '</span><span style="opacity:.8">' + esc(tb_.title || '') + (today.page ? ' · ' + esc(today.page) + '쪽' : '') + '</span></div>' +
       '<p style="margin:12px 0 0;font-size:17px;font-weight:700;line-height:1.6;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">' + esc(cleanQ(today.text)) + '</p></button>' : '') +
     (!q ? '<div class="hscroll" style="margin-top:22px">' + [['many', '많은 순'], ['recent', '최근 남긴 순']].map(function (o) { return '<button class="chipT" data-act="linesSort" data-s="' + o[0] + '" style="background:' + (sort === o[0] ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="hscroll" style="margin-top:8px">' + [''].concat(S.tags.filter(function (g) { return tc[g]; }).sort(function (a, b) { return tc[b] - tc[a]; })).concat(tc.__none ? ['__none'] : []).map(function (g) { return '<button class="chipT" data-act="linesTag" data-t="' + esc(g) + '" style="background:' + (T === g ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">' + (g ? (g === '__none' ? '분류 없음' : esc(g)) + ' · ' + tc[g] : '전체 분류') + '</button>'; }).join('') + '</div>' +
       '<div class="hscroll" style="margin-top:8px">' + [''].concat(Object.keys(yc).sort().reverse()).map(function (y) { return '<button class="chipT" data-act="linesYear" data-y="' + y + '" style="background:' + (Y === y ? '#351E1C;color:#F5F4ED' : 'rgba(53,30,28,.1)') + '">' + (y ? y + ' · ' + yc[y] : '전체 연도') + '</button>'; }).join('') + '</div>' : '') +
     body + '<div style="height:120px"></div></div>' + tabs('lines');
 }
@@ -602,6 +611,7 @@ var ACT = {
   },
   linesSort: function (d) { S.lines.sort = d.s; render(); },
   linesYear: function (d) { S.lines.year = d.y; render(); },
+  linesTag: function (d) { S.lines.tag = d.t; render(); },
   openQuote: function (d) {
     var q = S.quotes.find(function (x) { return x.id === d.id; }); if (!q) return;
     var qs = quotesOf(q.bookId); S.lines.book = q.bookId; S.lines.idx = qs.findIndex(function (x) { return x.id === q.id; }); go('lines/' + q.bookId);
