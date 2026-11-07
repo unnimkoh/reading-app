@@ -41,9 +41,8 @@ nav.tabs a.on{color:#fff;font-weight:700}
 .carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;height:100vh}
 .carousel::-webkit-scrollbar{display:none}
 .card{flex:0 0 100%;scroll-snap-align:start;position:relative;overflow:hidden;color:#351E1C;min-height:100vh;padding-bottom:100px}
-/* 표지는 화면 안에 전부 보이게(잘리지 않게), 기울기는 살짝만 */
-.cover{display:block;margin:14px auto 0;width:min(54vw,236px);aspect-ratio:2/3;object-fit:cover;border-radius:4px;transform:rotate(-3deg);box-shadow:0 26px 50px -18px rgba(0,0,0,.5);background:#0002}
-.card:nth-child(even) .cover{transform:rotate(3deg)}
+/* 표지는 화면 안에 전부 보이게(잘리지 않게), 기울이지 않는다(UK 2026-11-07) */
+.cover{display:block;margin:14px auto 0;width:min(54vw,236px);aspect-ratio:2/3;object-fit:cover;border-radius:4px;box-shadow:0 26px 50px -18px rgba(0,0,0,.5);background:#0002}
 .glass{background:rgba(255,255,255,.75);color:#351E1C}
 .scrub{height:4px;border-radius:2px;background:rgba(53,30,28,.2);position:relative}
 .scrub>i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:#351E1C}
@@ -270,7 +269,7 @@ function vBook(id) {
   document.body.style.background = c;
   var stBtns = Object.keys(ST).map(function (k) { return '<button class="pill" data-act="setStatus" data-id="' + b.id + '" data-st="' + k + '" style="height:36px;font-size:12px;background:' + (b.status === k ? '#351E1C;color:#fff' : 'rgba(255,255,255,.65)') + '">' + ST[k] + '</button>'; }).join('');
   return '<div style="background:' + c + ';color:#351E1C;position:relative;overflow:hidden;min-height:100vh">' +
-    topbar(tb('back', 'back', 'glass'), '', '<button data-act="editSheet" data-id="' + b.id + '" class="pill glass" style="height:34px;font-size:12px">정보 수정</button>') + coverImg(b, 'cover', 'transform:rotate(3deg)') +
+    topbar(tb('back', 'back', 'glass'), '', '<button data-act="editSheet" data-id="' + b.id + '" class="pill glass" style="height:34px;font-size:12px">정보 수정</button>') + coverImg(b, 'cover') +
     '<section style="position:relative;margin-top:30px;padding:0 20px 28px">' +
     '<div class="row" style="gap:6px;flex-wrap:wrap">' + stBtns + '</div>' +
     '<h1 class="bt" style="margin-top:16px">' + esc(b.title) + '</h1>' +
