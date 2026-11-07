@@ -124,6 +124,13 @@ function num(v) { var n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
 function pct(b) { var p = num(b.pages); return p ? Math.min(100, Math.round(num(b.currentPage) / p * 100)) : 0; }
 /* 밀리의 서재에서 복사할 때 붙는 출처 꼬리말은 화면에서만 뺀다(원본은 그대로) */
 function cleanQ(t) { return String(t || '').replace(/\s*-\s*<[^>]*>[\s\S]{0,120}?밀리의\s*서재\s*(https?:\/\/\S+)?\s*$/, '').replace(/\s*https?:\/\/(www\.)?millie\.co\.kr\/\S+\s*$/, '').trim(); }
+/* 별점(0.5~5, 반 개 단위) 그리기 */
+function starsHTML(v, size, on, off) {
+  v = parseFloat(v) || 0;
+  return '<span style="position:relative;display:inline-block;font-size:' + size + 'px;line-height:1;letter-spacing:2px;color:' + (off || 'rgba(53,30,28,.2)') + '">★★★★★<span style="position:absolute;left:0;top:0;overflow:hidden;white-space:nowrap;width:' + (v / 5 * 100) + '%;color:' + (on || '#351E1C') + '">★★★★★</span></span>';
+}
+function oneStar(f, size) { return '<span style="position:relative;display:inline-block;font-size:' + size + 'px;line-height:1;color:rgba(53,30,28,.22)">★<span style="position:absolute;left:0;top:0;overflow:hidden;width:' + (f * 100) + '%;color:#351E1C">★</span></span>'; }
+function rateOK(b, R) { var v = parseFloat(b.rating) || 0; if (!R) return true; if (R === 'none') return !v; if (R === 'low') return v && v <= 2.5; return v === parseFloat(R); }
 function tagsOf(b) { return String(b.tags || '').split('|').filter(Boolean); }
 function color(b) { var c = (b && b.color || '#FF6037').toUpperCase(); return OLD[c] || c; }
 function lastAct(b) {
@@ -244,8 +251,9 @@ function vReading() {
 /* 내 서재 */
 function vLibrary() {
   var L = S.lib, cnt = {}; Object.keys(ST).forEach(function (k) { cnt[k] = S.books.filter(function (b) { return b.status === k; }).length; });
-  var list = S.books.filter(function (b) { return b.status === L.status && (!L.tag || tagsOf(b).indexOf(L.tag) >= 0) && (!L.q || (b.title + ' ' + b.author).toLowerCase().indexOf(L.q.toLowerCase()) >= 0); });
+  var list = S.books.filter(function (b) { return b.status === L.status && rateOK(b, L.rate) && (!L.tag || tagsOf(b).indexOf(L.tag) >= 0) && (!L.q || (b.title + ' ' + b.author).toLowerCase().indexOf(L.q.toLowerCase()) >= 0); });
   list.sort(function (a, b) {
+    if (L.sort === 'rating') return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0) || ((b.endDate || '') > (a.endDate || '') ? 1 : -1);
     if (L.status === 'done') return (b.endDate || '') > (a.endDate || '') ? 1 : -1;
     if (L.status === 'want') return (num(a.queue) || 9999) - (num(b.queue) || 9999) || ((b.addedAt > a.addedAt) ? 1 : -1);
     return lastAct(b) > lastAct(a) ? 1 : -1;
@@ -266,11 +274,12 @@ function vLibrary() {
     (q.length ? '<h2 class="st">다음에 읽을 책</h2><div class="hscroll">' + q.map(function (b) { return '<a href="#book/' + b.id + '" style="flex:none;width:96px"><div style="position:relative">' + coverImg(b, '', 'width:96px;height:140px;object-fit:cover;border-radius:4px') + '<span class="circle" style="position:absolute;left:6px;top:6px;width:22px;height:22px;background:#351E1C;color:#fff;font-size:12px;font-weight:800">' + b.queue + '</span></div><div class="ell" style="font-size:12px;margin-top:6px">' + esc(b.title) + '</div></a>'; }).join('') + '</div>' : '') +
     '<div style="padding:32px 20px 4px" class="row"><h2 class="st" style="margin:0;flex:1">' + (L.tag ? esc(L.tag) + ' · ' : '') + ST[L.status] + ' ' + list.length + '</h2>' +
     (L.tag ? '<button class="chip" data-act="libTag" data-tag="">분류 해제</button>' : '') +
+    (!SEL ? '<button class="chip' + (L.rate || L.sort ? ' on' : '') + '" data-act="rateSheet" style="margin-left:6px">★ ' + (L.rate ? ({ none: '없음', low: '2.5↓' }[L.rate] || L.rate) : L.sort ? '높은 순' : '별점') + '</button>' : '') +
     (SEL ? '<button class="chip" id="selAllBtn" data-act="selAll" style="margin-left:6px">' + (nSel && nSel === list.length ? '모두 해제' : '모두 선택') + '</button><button class="chip on" data-act="selCancel" style="margin-left:6px">완료</button>'
       : (list.length ? '<button class="chip" data-act="selStart" style="margin-left:6px">선택</button>' : '')) + '</div>' +
     '<div style="padding:6px 20px"><input class="field" style="background:#4D2F2C;color:#fff;height:44px;padding:0 16px;font-size:15px" placeholder="서재에서 찾기" value="' + esc(L.q) + '" data-input="libQ"></div>' +
     '<div>' + (list.length ? list.slice(0, 300).map(function (b) {
-      var sub = b.status === 'done' ? (b.endDate || '') : b.status === 'reading' ? pct(b) + '% · ' + esc(b.author) : esc(b.author);
+      var sub = (parseFloat(b.rating) ? '<span style="color:#FF6037">★' + b.rating + '</span> · ' : '') + (b.status === 'done' ? (b.endDate || '') : b.status === 'reading' ? pct(b) + '% · ' + esc(b.author) : esc(b.author));
       var inner = coverImg(b, 'thumb') + '<div style="min-width:0;flex:1;text-align:left"><div class="ell" style="font-size:15px;font-weight:700">' + esc(b.title) + '</div><div class="ell muted" style="font-size:12px;margin-top:2px">' + (tagsOf(b).length ? esc(tagsOf(b).join(' · ')) + ' · ' : '') + sub + '</div></div>';
       if (SEL) return '<button class="item" style="width:100%" data-act="selToggle" data-id="' + b.id + '"><span class="chk ' + (SEL[b.id] ? 'on' : '') + '">' + (SEL[b.id] ? '✓' : '') + '</span>' + inner + '</button>';
       return '<a class="item" href="#book/' + b.id + '">' + inner + '</a>';
@@ -293,6 +302,8 @@ function vBook(id) {
     '<h1 class="bt" style="margin-top:16px">' + esc(b.title) + '</h1>' +
     '<p class="au">' + esc(b.author) + '</p>' +
     '<p class="mt">' + esc([b.publisher, b.pages ? b.pages + '쪽' : '쪽수 없음', b.startDate ? b.startDate + ' 시작' : '', b.endDate ? b.endDate + ' 완독' : ''].filter(Boolean).join(' · ')) + '</p>' +
+    '<div class="row" style="gap:2px;margin-top:14px">' + [1, 2, 3, 4, 5].map(function (k) { var v = parseFloat(b.rating) || 0; return '<button data-act="rate" data-id="' + b.id + '" data-n="' + k + '" aria-label="별 ' + k + '개" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center">' + oneStar(v >= k ? 1 : v >= k - 0.5 ? 0.5 : 0, 30) + '</button>'; }).join('') +
+    '<span style="font-size:12px;font-weight:700;margin-left:8px">' + (parseFloat(b.rating) ? b.rating + ' / 5' : '별을 눌러 별점 주기') + '</span></div>' +
     '<div class="scrub" style="margin-top:20px"><i style="width:' + p + '%"></i></div>' +
     '<div class="row" style="justify-content:space-between;margin-top:8px;font-size:12px;font-weight:700"><span>' + num(b.currentPage) + ' / ' + (b.pages || '?') + '쪽</span><span>' + p + '%</span></div>' +
     '<div class="row" style="gap:8px;margin-top:18px;flex-wrap:wrap">' +
@@ -410,6 +421,7 @@ function vWrapped() {
   var wmax = Math.max.apply(null, wd) || 1, wsum = wd.reduce(function (a, b) { return a + b; }, 0);
   var mon = []; for (var m = 1; m <= 12; m++) mon.push(done.filter(function (b) { return num(b.endDate.slice(5, 7)) === m; }).length);
   var mmax = Math.max.apply(null, mon) || 1, best = mon.indexOf(Math.max.apply(null, mon)) + 1;
+  var topR = done.filter(function (b) { return parseFloat(b.rating); }).sort(function (a, b) { return (parseFloat(b.rating) - parseFloat(a.rating)) || ((b.endDate || '') > (a.endDate || '') ? 1 : -1); }).slice(0, 5);
   var thick = done.slice().sort(function (a, b) { return num(b.pages) - num(a.pages); })[0];
   var all = {}; S.books.forEach(function (b) { if (b.status === 'done' && b.endDate) { var k = b.endDate.slice(0, 4); all[k] = (all[k] || 0) + 1; } });
   var allY = Object.keys(all).sort(), amax = Math.max.apply(null, allY.map(function (k) { return all[k]; })) || 1;
@@ -424,6 +436,9 @@ function vWrapped() {
     '<p style="margin:16px 64px 0 20px;font-size:15px;line-height:1.6">' + y + '년에 다 읽은 책과 남긴 문장을 모았어요.</p></section>' +
     '<section style="padding:40px 20px">' + H(y + '년을<br>숫자로', '#733635') +
     big(done.length, '권을 다 읽었다') + big(pages.toLocaleString(), '쪽을 넘겼다' + (withP < done.length ? ' (쪽수가 적힌 ' + withP + '권 기준)' : '')) + big(qY.length, '개의 문장을 남겼다') + '</section>' +
+    (topR.length ? '<section style="padding:0 20px 40px">' + H('별점 높은 책', '#733635') + topR.map(function (b, i) {
+      return '<a href="#book/' + b.id + '" class="row" style="gap:14px;padding:10px 0">' + coverImg(b, 'thumb') + '<div style="min-width:0;flex:1"><div class="ell" style="font-size:15px;font-weight:800">' + esc(b.title) + '</div><div style="margin-top:4px">' + starsHTML(b.rating, 15, '#FF6037') + ' <b style="font-size:12px;margin-left:4px">' + b.rating + '</b></div></div></a>';
+    }).join('') + '</section>' : '') +
     (topQ.length ? '<section style="background:#FF6037;padding:40px 20px 60px;clip-path:' + zigB + '">' + H('문장을 가장<br>많이 남긴 책', '#351E1C') +
       topQ.map(function (id, i) { var x = book(id) || {}; return '<a href="#lines/' + id + '" class="row" style="gap:12px;padding:12px 0;border-bottom:1px solid rgba(53,30,28,.25)"><span class="circle" style="width:26px;height:26px;border:2px solid #351E1C;font-size:12px;font-weight:800">' + (i + 1) + '</span><span><span style="display:block;font-size:15px;font-weight:800;color:#351E1C">' + esc(x.title) + '</span><span style="font-size:12px;font-weight:500">문장 ' + qc[id] + '개</span></span></a>'; }).join('') + '</section>' : '') +
     '<section style="padding:40px 20px">' + H('달마다', '#733635') +
@@ -570,6 +585,22 @@ var ACT = {
   colorSheet: function (d) { colorSheet(d.id); },
   manualSheet: manualSheet,
   yes: function () { var f = S._yes; closeSheet(); if (f) f(); },
+  rate: function (d) {
+    var b = book(d.id), cur = parseFloat(b.rating) || 0, k = num(d.n), v = cur === k ? k - 0.5 : cur === k - 0.5 ? 0 : k;
+    saveBook(d.id, { rating: v ? String(v) : '' });
+  },
+  rateSheet: function () {
+    var L = S.lib, base = S.books.filter(function (b) { return b.status === L.status; }), c = function (R) { return base.filter(function (b) { return rateOK(b, R); }).length; };
+    var opt = [['', '전체'], ['5', '★5'], ['4.5', '★4.5'], ['4', '★4'], ['3.5', '★3.5'], ['3', '★3'], ['low', '★2.5 이하'], ['none', '별점 없음']];
+    openSheet(sheetHead(null, ST[L.status] + ' · 별점') +
+      '<div style="font-size:12px;font-weight:700;color:#5E5A54;margin-top:18px">별점으로 거르기</div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">' +
+      opt.map(function (o) { return '<button class="pill" data-act="rateSet" data-r="' + o[0] + '" style="height:38px;background:' + ((L.rate || '') === o[0] ? '#351E1C;color:#F5F4ED' : '#fff') + '">' + o[1] + ' · ' + c(o[0]) + '</button>'; }).join('') + '</div>' +
+      '<div style="font-size:12px;font-weight:700;color:#5E5A54;margin-top:18px">정렬</div><div class="row" style="gap:6px;margin-top:8px">' +
+      [['', '기본'], ['rating', '별점 높은 순']].map(function (o) { return '<button class="pill" data-act="rateSort" data-s="' + o[0] + '" style="height:38px;background:' + ((L.sort || '') === o[0] ? '#351E1C;color:#F5F4ED' : '#fff') + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+      '<button class="btn" style="margin-top:20px" data-act="closeSheet">보기</button>');
+  },
+  rateSet: function (d) { S.lib.rate = d.r; render(); ACT.rateSheet(); },
+  rateSort: function (d) { S.lib.sort = d.s; render(); ACT.rateSheet(); },
   libStatus: function (d) { S.lib.status = d.st; S.sel = S.sel ? {} : null; render(); },
   selStart: function () { S.sel = {}; render(); },
   selCancel: function () { S.sel = null; render(); },
