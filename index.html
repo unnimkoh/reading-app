@@ -123,7 +123,7 @@ function book(id) { return S.books.find(function (b) { return b.id === id; }); }
 function num(v) { var n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
 function pct(b) { var p = num(b.pages); return p ? Math.min(100, Math.round(num(b.currentPage) / p * 100)) : 0; }
 /* 밀리의 서재에서 복사할 때 붙는 출처 꼬리말은 화면에서만 뺀다(원본은 그대로) */
-function cleanQ(t) { return String(t || '').replace(/\s*-\s*<[^>]*>[\s\S]{0,120}?밀리의\s*서재\s*(https?:\/\/\S+)?\s*$/, '').replace(/\s*https?:\/\/(www\.)?millie\.co\.kr\/\S+\s*$/, '').trim(); }
+function cleanQ(t) { return String(t || '').replace(/\s*[^\n|]{0,80}\|\s*[^\n]{0,40}?\s*리디북스에서 자세히 보기:\s*https?:\/\/\S+\s*$/, '').replace(/\s*-\s*<[^>]*>[\s\S]{0,120}?밀리의\s*서재\s*(https?:\/\/\S+)?\s*$/, '').replace(/\s*https?:\/\/(www\.)?millie\.co\.kr\/\S+\s*$/, '').trim(); }
 /* 별점(0.5~5, 반 개 단위) 그리기 */
 function starsHTML(v, size, on, off) {
   v = parseFloat(v) || 0;
