@@ -314,6 +314,8 @@ function vBook(id) {
     '<button class="pill glass" style="height:34px;font-size:12px" data-act="fieldSheet" data-id="' + b.id + '" data-f="pages">전체 ' + (b.pages ? b.pages + '쪽' : '쪽수 없음') + ' ✎</button></div>' +
     '<div class="row" style="gap:2px;margin-top:14px">' + [1, 2, 3, 4, 5].map(function (k) { var v = parseFloat(b.rating) || 0; return '<button data-act="rate" data-id="' + b.id + '" data-n="' + k + '" aria-label="별 ' + k + '개" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center">' + oneStar(v >= k ? 1 : v >= k - 0.5 ? 0.5 : 0, 30) + '</button>'; }).join('') +
     '<span style="font-size:12px;font-weight:700;margin-left:8px">' + (parseFloat(b.rating) ? b.rating + ' / 5' : '별을 눌러 별점 주기') + '</span></div>' +
+    (b.review ? '<button data-act="reviewSheet" data-id="' + b.id + '" style="display:block;text-align:left;margin-top:8px;font-size:15px;line-height:1.55;font-weight:600">“' + esc(b.review) + '” <span style="font-size:12px;opacity:.6">✎</span></button>'
+      : (b.status === 'done' ? '<button class="pill glass" style="height:34px;font-size:12px;margin-top:8px" data-act="reviewSheet" data-id="' + b.id + '">+ 코멘트 남기기</button>' : '')) +
     '<div class="scrub" style="margin-top:20px"><i style="width:' + p + '%"></i></div>' +
     '<div class="row" style="justify-content:space-between;margin-top:8px;font-size:12px;font-weight:700"><span>' + num(b.currentPage) + ' / ' + (b.pages || '?') + '쪽</span><span>' + p + '%</span></div>' +
     '<div class="row" style="gap:8px;margin-top:18px;flex-wrap:wrap">' +
@@ -600,6 +602,13 @@ var ACT = {
   colorSheet: function (d) { colorSheet(d.id); },
   manualSheet: manualSheet,
   yes: function () { var f = S._yes; closeSheet(); if (f) f(); },
+  rvStar: function (d) {
+    var r = S._rv; if (!r) return; var k = num(d.n); r.v = r.v === k ? k - 0.5 : r.v === k - 0.5 ? 0 : k;
+    document.getElementById('rvStars').innerHTML = rvStars(r.v);
+    document.getElementById('rvVal').textContent = r.v ? r.v + ' / 5 · 한 번 더 누르면 반 개' : '별을 누르세요 · 한 번 더 누르면 반 개';
+  },
+  rvLater: function () { closeSheet(); rvEnd(); },
+  reviewSheet: function (d) { reviewSheet(d.id, false); },
   rate: function (d) {
     var b = book(d.id), cur = parseFloat(b.rating) || 0, k = num(d.n), v = cur === k ? k - 0.5 : cur === k - 0.5 ? 0 : k;
     saveBook(d.id, { rating: v ? String(v) : '' });
@@ -682,7 +691,7 @@ var ACT = {
   setStatus: function (d) {
     if (d.st === 'reading') { var br = book(d.id); startSheet('「' + br.title + '」', br.startDate, function (dt) { saveBook(d.id, { status: 'reading', startDate: dt }); }); return; }
     if (d.st !== 'done') { saveBook(d.id, { status: d.st }); return; }
-    var b = book(d.id); doneSheet('「' + b.title + '」', b.endDate, function (dt) { saveBook(d.id, { status: 'done', endDate: dt }).then(afterDone); });
+    var b = book(d.id); doneSheet('「' + b.title + '」', b.endDate, function (dt) { saveBook(d.id, { status: 'done', endDate: dt }); reviewSheet(d.id, true); });
   },
   setColor: function (d) { closeSheet(); saveBook(d.id, { color: d.c }); },
   startBook: function (d) { saveBook(d.id, { status: 'reading' }); },
@@ -741,6 +750,10 @@ var FORM = {
     if (k === 'pages') { var b = book(id); if (b.status === 'done') patch.currentPage = v; }
     closeSheet(); saveBook(id, patch);
   },
+  review: function (f) {
+    var r = S._rv; if (!r) return; closeSheet();
+    saveBook(r.id, { rating: r.v ? String(r.v) : '', review: f.r.value.trim() }); toast('남겼어요'); rvEnd();
+  },
   done: function (f) { var v = f.d.value, cb = S._done; closeSheet(); if (cb) cb(v); },
   selTagNew: function (f) { var v = f.t.value.trim(); if (!v) return; call('tagAdd', v).then(function (t) { S.tags = t; ACT.selTagApply({ tag: v }); }).catch(fail); },
   search: function () { S.search.q = document.getElementById('sq').value; doSearch(); },
@@ -777,7 +790,7 @@ function saveBook(id, patch) {
   var b = book(id); Object.assign(b, patch); render();
   return call('updateBook', id, patch).then(function (nb) { replace(S.books, nb); render(); return nb; }).catch(function (e) { fail(e); });
 }
-function askDone(b) { doneSheet('「' + b.title + '」 다 읽음으로 바꿀까요?', b.endDate, function (dt) { saveBook(b.id, { status: 'done', endDate: dt }).then(afterDone); }); }
+function askDone(b) { doneSheet('「' + b.title + '」 다 읽음으로 바꿀까요?', b.endDate, function (dt) { saveBook(b.id, { status: 'done', endDate: dt }); reviewSheet(b.id, true); }); }
 /* 선택 표시만 그 자리에서 바꾼다(전체를 다시 그리면 표지가 다시 불려 와 깜빡인다) */
 function e_inBtn(el) { return false; }
 function selPaint() {
@@ -787,6 +800,19 @@ function selPaint() {
   if (a) a.textContent = n && n === ids.length ? '모두 해제' : '모두 선택';
 }
 /* 다 읽음으로 바꿀 때 완독일 묻기 */
+/* 다 읽은 뒤 별점·코멘트 (나중에 책 상세에서 다시 고칠 수 있다) */
+function rvStars(v) { return [1, 2, 3, 4, 5].map(function (k) { return '<button type="button" data-act="rvStar" data-n="' + k + '" aria-label="별 ' + k + '개" style="width:52px;height:52px;display:flex;align-items:center;justify-content:center">' + oneStar(v >= k ? 1 : v >= k - 0.5 ? 0.5 : 0, 40) + '</button>'; }).join(''); }
+function reviewSheet(id, fresh) {
+  var b = book(id); S._rv = { id: id, v: parseFloat(b.rating) || 0, fresh: fresh };
+  openSheet(sheetHead(b, fresh ? '다 읽었어요' : '별점·코멘트') +
+    '<div class="kr" style="margin-top:24px;font-size:15px;font-weight:500">몇 점인가요?</div>' +
+    '<div class="row" id="rvStars" style="gap:0;margin-top:6px;margin-left:-6px">' + rvStars(S._rv.v) + '</div>' +
+    '<div id="rvVal" style="font-size:12px;color:#5E5A54;margin-top:2px">' + (S._rv.v ? S._rv.v + ' / 5 · 한 번 더 누르면 반 개' : '별을 누르세요 · 한 번 더 누르면 반 개') + '</div>' +
+    '<form data-form="review"><label style="display:block;margin-top:18px"><span style="font-size:12px;color:#5E5A54">코멘트</span><textarea class="field" name="r" rows="4" placeholder="이 책 어땠나요?" style="margin-top:6px">' + esc(b.review || '') + '</textarea></label>' +
+    '<button class="btn" style="margin-top:14px">저장</button></form>' +
+    (fresh ? '<button class="btn" style="margin-top:8px;background:#fff;color:#351E1C" data-act="rvLater">나중에</button>' : ''));
+}
+function rvEnd() { var r = S._rv; S._rv = null; if (r && r.fresh) afterDone(book(r.id)); }
 function fieldSheet(id, f) {
   var b = book(id), lab = { startDate: '언제부터 읽었나요?', endDate: '언제 다 읽었나요?', pages: '전체 몇 쪽인가요?' }[f], isDate = f !== 'pages';
   openSheet(sheetHead(b, f === 'pages' ? '이북리더기는 기기에 나오는 전체 쪽수로 맞추세요' : '') +
