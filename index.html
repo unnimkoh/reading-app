@@ -522,14 +522,16 @@ function sheetHead(b, title) {
     '<div style="min-width:0"><div class="ell" style="font-size:15px;font-weight:700">' + esc(b ? b.title : title) + '</div><div style="font-size:12px;color:#5E5A54">' + esc(b ? (title || '') : '') + '</div></div></div>' +
     '<button data-act="closeSheet" class="circle" style="width:44px;height:44px;background:#fff">' + ic('x', 18) + '</button></div>';
 }
+function pgFit(i) { i.style.width = (Math.max(1, String(i.value).length) * 0.56 + 0.08) + 'em'; }
 function pageSheet(id) {
   var b = book(id);
   openSheet(sheetHead(b, '지난번 ' + num(b.currentPage) + '쪽 · 전체 ' + (b.pages || '?') + '쪽') +
     '<div class="kr" style="margin-top:28px;font-size:15px;font-weight:500">몇 쪽까지 읽었나요?</div>' +
-    '<form data-form="page" data-id="' + id + '"><div class="row" style="align-items:baseline;gap:8px"><input id="pgIn" name="p" type="number" inputmode="numeric" value="' + (num(b.currentPage) || '') + '" oninput="var r=document.getElementById(\'pgR\');if(r)r.value=this.value" style="flex:1;min-width:0;width:100%;padding:0;border:0;outline:0;background:transparent;font-weight:200;font-size:96px;letter-spacing:-4px;line-height:1"><span style="font-size:22px;font-weight:500;flex:none">쪽</span></div>' +
-    (b.pages ? '<input id="pgR" type="range" class="pgr" min="0" max="' + b.pages + '" step="1" value="' + Math.min(num(b.currentPage), b.pages) + '" oninput="document.getElementById(\'pgIn\').value=this.value"><div class="row" style="justify-content:space-between;font-size:12px;color:#5E5A54;margin:4px 0 22px"><span>0</span><span>' + b.pages + '쪽</span></div>' : '<div style="height:22px"></div>') +
+    '<form data-form="page" data-id="' + id + '"><div class="row" style="align-items:baseline;gap:8px"><input id="pgIn" name="p" type="number" inputmode="numeric" value="' + (num(b.currentPage) || '') + '" oninput="pgFit(this);var r=document.getElementById(\'pgR\');if(r)r.value=this.value" style="min-width:0;max-width:calc(100% - 40px);padding:0;border:0;outline:0;background:transparent;font-weight:200;font-size:96px;letter-spacing:-4px;line-height:1"><span style="font-size:22px;font-weight:500;flex:none">쪽</span></div>' +
+    (b.pages ? '<input id="pgR" type="range" class="pgr" min="0" max="' + b.pages + '" step="1" value="' + Math.min(num(b.currentPage), b.pages) + '" oninput="var i=document.getElementById(\'pgIn\');i.value=this.value;pgFit(i)"><div class="row" style="justify-content:space-between;font-size:12px;color:#5E5A54;margin:4px 0 22px"><span>0</span><span>' + b.pages + '쪽</span></div>' : '<div style="height:22px"></div>') +
     '<button class="btn">저장</button></form>' +
     '<button class="btn" style="margin-top:8px;background:#fff;color:#351E1C;font-size:14px;height:46px" data-act="fieldSheet" data-id="' + id + '" data-f="pages">전체 쪽수 수정</button>');
+  var i0 = document.getElementById('pgIn'); pgFit(i0);
   setTimeout(function () { var i = document.getElementById('pgIn'); i.focus(); i.select(); }, 50);
 }
 function quoteSheet(id, photo) {
