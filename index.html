@@ -87,6 +87,9 @@ textarea.field{resize:none;line-height:1.6}
 .mt{font-size:12px;font-weight:700;margin:6px 0 0}
 /* 가사 */
 .lines p{margin:0;font-family:'Noto Sans KR',sans-serif;font-weight:900;letter-spacing:-.03em;transition:all .2s}
+.pgr{-webkit-appearance:none;appearance:none;width:100%;height:28px;margin:22px 0 0;background:transparent}
+.pgr::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#351E1C22}
+.pgr::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-11px;border-radius:50%;background:#FF6037;border:3px solid #fff;box-shadow:0 1px 4px #0003}
 </style>
 </head>
 <body>
@@ -523,10 +526,10 @@ function pageSheet(id) {
   var b = book(id);
   openSheet(sheetHead(b, '지난번 ' + num(b.currentPage) + '쪽 · 전체 ' + (b.pages || '?') + '쪽') +
     '<div class="kr" style="margin-top:28px;font-size:15px;font-weight:500">몇 쪽까지 읽었나요?</div>' +
-    '<form data-form="page" data-id="' + id + '"><div class="row" style="align-items:baseline;gap:8px"><input id="pgIn" name="p" type="number" inputmode="numeric" value="' + (num(b.currentPage) || '') + '" style="width:230px;border:0;outline:0;background:transparent;font-weight:200;font-size:110px;letter-spacing:-6px;line-height:1"><span style="font-size:22px;font-weight:500">쪽</span></div>' +
-    '<div class="row" style="gap:6px;margin:18px 0 22px;flex-wrap:wrap">' + [10, 20, 50].map(function (n) { return '<button type="button" class="btn2" data-act="pgAdd" data-n="' + n + '">+' + n + '</button>'; }).join('') + (b.pages ? '<button type="button" class="btn2" data-act="pgEnd" data-n="' + b.pages + '">끝까지</button>' : '') + '</div>' +
+    '<form data-form="page" data-id="' + id + '"><div class="row" style="align-items:baseline;gap:8px"><input id="pgIn" name="p" type="number" inputmode="numeric" value="' + (num(b.currentPage) || '') + '" oninput="var r=document.getElementById(\'pgR\');if(r)r.value=this.value" style="flex:1;min-width:0;width:100%;padding:0;border:0;outline:0;background:transparent;font-weight:200;font-size:96px;letter-spacing:-4px;line-height:1"><span style="font-size:22px;font-weight:500;flex:none">쪽</span></div>' +
+    (b.pages ? '<input id="pgR" type="range" class="pgr" min="0" max="' + b.pages + '" step="1" value="' + Math.min(num(b.currentPage), b.pages) + '" oninput="document.getElementById(\'pgIn\').value=this.value"><div class="row" style="justify-content:space-between;font-size:12px;color:#5E5A54;margin:4px 0 22px"><span>0</span><span>' + b.pages + '쪽</span></div>' : '<div style="height:22px"></div>') +
     '<button class="btn">저장</button></form>' +
-    '<button class="btn" style="margin-top:8px;background:#fff;color:#351E1C;font-size:14px;height:46px" data-act="fieldSheet" data-id="' + id + '" data-f="pages">전체 ' + (b.pages ? b.pages + '쪽' : '쪽수') + ' 바꾸기 (이북리더기 등)</button>');
+    '<button class="btn" style="margin-top:8px;background:#fff;color:#351E1C;font-size:14px;height:46px" data-act="fieldSheet" data-id="' + id + '" data-f="pages">전체 쪽수 수정</button>');
   setTimeout(function () { var i = document.getElementById('pgIn'); i.focus(); i.select(); }, 50);
 }
 function quoteSheet(id, photo) {
