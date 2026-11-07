@@ -366,8 +366,8 @@ function vAlbums() {
       '<div class="row" style="justify-content:space-between;font-size:12px;font-weight:800;color:#FF6037"><span>' + (Lq.pick ? '골라 본 문장' : '오늘의 문장') + '</span><span style="opacity:.8">' + esc(tb_.title || '') + (today.page ? ' · ' + esc(today.page) + '쪽' : '') + '</span></div>' +
       '<p style="margin:12px 0 0;font-size:17px;font-weight:700;line-height:1.6;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">' + esc(cleanQ(today.text)) + '</p></button>' : '') +
     (!q ? '<div class="hscroll" style="margin-top:22px">' + [['many', '많은 순'], ['recent', '최근 남긴 순']].map(function (o) { return '<button class="chipT" data-act="linesSort" data-s="' + o[0] + '" style="background:' + (sort === o[0] ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">' + o[1] + '</button>'; }).join('') + '</div>' +
-      '<div class="hscroll" style="margin-top:8px">' + [''].concat(S.tags.filter(function (g) { return tc[g]; }).sort(function (a, b) { return tc[b] - tc[a]; })).concat(tc.__none ? ['__none'] : []).map(function (g) { return '<button class="chipT" data-act="linesTag" data-t="' + esc(g) + '" style="background:' + (T === g ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">' + (g ? (g === '__none' ? '분류 없음' : esc(g)) + ' · ' + tc[g] : '전체 분류') + '</button>'; }).join('') + '</div>' +
-      '<div class="hscroll" style="margin-top:8px">' + [''].concat(Object.keys(yc).sort().reverse()).map(function (y) { return '<button class="chipT" data-act="linesYear" data-y="' + y + '" style="background:' + (Y === y ? '#351E1C;color:#F5F4ED' : 'rgba(53,30,28,.1)') + '">' + (y ? y + ' · ' + yc[y] : '전체 연도') + '</button>'; }).join('') + '</div>' : '') +
+      '<div class="row" style="padding:10px 20px 0;gap:8px"><button class="pill" data-act="linesFilter" style="height:36px;background:' + (T || Y ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>필터' + (T || Y ? ' · ' + esc([T ? (T === '__none' ? '분류 없음' : T) : '', Y].filter(Boolean).join(' · ')) : '') + '</button>' +
+      (T || Y ? '<button class="chipT" data-act="linesClear" style="background:rgba(53,30,28,.1);height:36px;line-height:36px">지우기</button>' : '') + '</div>' : '') +
     body + '<div style="height:120px"></div></div>' + tabs('lines');
 }
 function vLyrics(id) {
@@ -611,7 +611,23 @@ var ACT = {
   },
   linesSort: function (d) { S.lines.sort = d.s; render(); },
   linesYear: function (d) { S.lines.year = d.y; render(); },
-  linesTag: function (d) { S.lines.tag = d.t; render(); },
+  linesTag: function (d) { S.lines.tag = S.lines.tag === d.t ? '' : d.t; render(); ACT.linesFilter(); },
+  linesYear2: function (d) { S.lines.year = S.lines.year === d.y ? '' : d.y; render(); ACT.linesFilter(); },
+  linesClear: function () { S.lines.tag = ''; S.lines.year = ''; closeSheet(); render(); },
+  linesFilter: function () {
+    var Lq = S.lines, T = Lq.tag || '', Y = Lq.year || '', tc = {}, yc = {};
+    var tagOK = function (x) { var t = tagsOf(book(x.bookId) || {}); return !T || (T === '__none' ? !t.length : t.indexOf(T) >= 0); };
+    S.quotes.forEach(function (x) { var y = (x.createdAt || '').slice(0, 4);
+      if (y && tagOK(x)) yc[y] = (yc[y] || 0) + 1;
+      if (!Y || y === Y) { var t = tagsOf(book(x.bookId) || {}); if (!t.length) tc.__none = (tc.__none || 0) + 1; t.forEach(function (g) { tc[g] = (tc[g] || 0) + 1; }); } });
+    var chip = function (act, key, val, label, on) { return '<button class="pill" data-act="' + act + '" data-' + key + '="' + esc(val) + '" style="height:38px;background:' + (on ? '#351E1C;color:#F5F4ED' : '#fff') + '">' + label + '</button>'; };
+    openSheet(sheetHead(null, '문장 필터') +
+      '<div style="font-size:12px;font-weight:700;color:#5E5A54;margin-top:18px">분류</div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">' +
+      S.tags.filter(function (g) { return tc[g]; }).sort(function (a, b) { return tc[b] - tc[a]; }).concat(tc.__none ? ['__none'] : []).map(function (g) { return chip('linesTag', 't', g, (g === '__none' ? '분류 없음' : esc(g)) + ' · ' + tc[g], T === g); }).join('') + '</div>' +
+      '<div style="font-size:12px;font-weight:700;color:#5E5A54;margin-top:18px">연도</div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">' +
+      Object.keys(yc).sort().reverse().map(function (y) { return chip('linesYear2', 'y', y, y + ' · ' + yc[y], Y === y); }).join('') + '</div>' +
+      '<div class="row" style="gap:8px;margin-top:20px"><button class="btn" style="background:#fff;color:#351E1C" data-act="linesClear">모두 지우기</button><button class="btn" data-act="closeSheet">보기</button></div>');
+  },
   openQuote: function (d) {
     var q = S.quotes.find(function (x) { return x.id === d.id; }); if (!q) return;
     var qs = quotesOf(q.bookId); S.lines.book = q.bookId; S.lines.idx = qs.findIndex(function (x) { return x.id === q.id; }); go('lines/' + q.bookId);
