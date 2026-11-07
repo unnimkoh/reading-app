@@ -319,18 +319,58 @@ function quoteCard(q, c) {
     (q.thought ? '<p style="margin:8px 0 0;font-size:12px;color:' + (c || '#FF6037') + '">' + esc(q.thought) + '</p>' : '') + '</div>';
 }
 
-/* 문장 (가사 보기) */
+/* 문장 — 책별 앨범(첫 화면) → 책을 누르면 가사 보기 */
 function vLines(id) {
-  var b = id ? book(id) : null;
-  var qs = b ? quotesOf(b.id) : S.quotes.slice().sort(function (a, x) { return x.createdAt > a.createdAt ? 1 : -1; });
-  var bg = b ? color(b) : '#FF6037';
+  return id ? vLyrics(id) : vAlbums();
+}
+function dayHash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+function vAlbums() {
+  var bg = '#FF6037'; document.body.style.background = bg;
+  var Lq = S.lines, q = (Lq.q || '').trim().toLowerCase(), sort = Lq.sort || 'many';
+  var cnt = {}, last = {};
+  S.quotes.forEach(function (x) { cnt[x.bookId] = (cnt[x.bookId] || 0) + 1; if (!last[x.bookId] || x.createdAt > last[x.bookId]) last[x.bookId] = x.createdAt || ''; });
+  var bs = S.books.filter(function (x) { return cnt[x.id]; });
+  bs.sort(function (a, x) { return sort === 'many' ? (cnt[x.id] - cnt[a.id]) : (last[x.id] > last[a.id] ? 1 : -1); });
+  var today = S.quotes.length ? (Lq.pick ? S.quotes.find(function (x) { return x.id === Lq.pick; }) : S.quotes[dayHash(S.today) % S.quotes.length]) : null;
+  var tb_ = today ? book(today.bookId) || {} : {};
+  var tile = function (x) {
+    return '<a href="#lines/' + x.id + '" style="display:block;min-width:0">' +
+      '<div style="aspect-ratio:2/3;border-radius:6px;background:rgba(53,30,28,.12);display:flex;align-items:flex-end;justify-content:center;overflow:hidden">' +
+      (x.cover ? '<img src="' + esc(x.cover) + '" loading="lazy" alt="" style="max-width:100%;max-height:100%;display:block;box-shadow:0 10px 20px -10px rgba(0,0,0,.45)">' : '<div class="h900" style="width:100%;height:100%;background:' + color(x) + ';padding:10px;font-size:15px;display:flex;align-items:flex-end">' + esc(x.title) + '</div>') + '</div>' +
+      '<div style="font-size:15px;font-weight:700;margin-top:8px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' + esc(x.title) + '</div>' +
+      '<div style="font-size:12px;font-weight:700;opacity:.7;margin-top:2px">문장 ' + cnt[x.id] + '</div></a>';
+  };
+  var grid = function (list) { return '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 14px;padding:0 20px">' + list.map(tile).join('') + '</div>'; };
+  var body;
+  if (q) {
+    var hits = S.quotes.filter(function (x) { return (x.text + ' ' + x.thought).toLowerCase().indexOf(q) >= 0; }).slice(0, 100);
+    body = '<h2 class="st">찾은 문장 ' + hits.length + (hits.length === 100 ? '+' : '') + '</h2><div style="padding:0 20px">' + (hits.length ? hits.map(function (x) {
+      var xb = book(x.bookId) || {};
+      return '<button data-act="openQuote" data-id="' + x.id + '" style="display:block;width:100%;text-align:left;padding:14px 0;border-bottom:1px solid rgba(53,30,28,.18)"><div style="font-size:12px;font-weight:700;opacity:.65;margin-bottom:4px">' + esc([xb.title, x.page ? x.page + '쪽' : ''].filter(Boolean).join(' · ')) + '</div><p class="clamp3" style="margin:0;font-size:15px;font-weight:700;line-height:1.6">' + esc(cleanQ(x.text)) + '</p></button>';
+    }).join('') : '<p style="font-size:15px">찾는 글자가 들어간 문장이 없어요.</p>') + '</div>';
+  } else if (sort === 'year') {
+    var by = {}; bs.forEach(function (x) { var y = (last[x.id] || '').slice(0, 4) || '날짜 없음'; (by[y] = by[y] || []).push(x); });
+    body = Object.keys(by).sort().reverse().map(function (y) { return '<h2 class="st">' + y + ' <span style="opacity:.5">' + by[y].length + '권</span></h2>' + grid(by[y]); }).join('');
+  } else body = '<div style="height:20px"></div>' + grid(bs);
+  return '<div style="background:' + bg + ';min-height:100vh;color:#351E1C">' +
+    topbar('', '', tb('shuffle', 'shuffle', 'glass'), bg) +
+    '<h1 class="pt">문장 <span style="opacity:.45">' + S.quotes.length + '</span></h1>' +
+    '<div style="padding:16px 20px 0"><input class="field" data-input="qQ" value="' + esc(Lq.q || '') + '" placeholder="문장에서 찾기 (예: 원칙)" style="background:rgba(255,255,255,.6);color:#351E1C;height:46px;padding:0 16px"></div>' +
+    (today && !q ? '<button data-act="openQuote" data-id="' + today.id + '" style="display:block;text-align:left;margin:20px 20px 0;width:calc(100% - 40px);border-radius:22px;background:#351E1C;color:#F5F4ED;padding:20px">' +
+      '<div class="row" style="justify-content:space-between;font-size:12px;font-weight:800;color:#FF6037"><span>' + (Lq.pick ? '골라 본 문장' : '오늘의 문장') + '</span><span style="opacity:.8">' + esc(tb_.title || '') + (today.page ? ' · ' + esc(today.page) + '쪽' : '') + '</span></div>' +
+      '<p style="margin:12px 0 0;font-size:17px;font-weight:700;line-height:1.6;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">' + esc(cleanQ(today.text)) + '</p></button>' : '') +
+    (!q ? '<div class="hscroll" style="margin-top:22px">' + [['many', '많은 순'], ['recent', '최근 남긴 순'], ['year', '연도별']].map(function (o) { return '<button class="chipT" data-act="linesSort" data-s="' + o[0] + '" style="background:' + (sort === o[0] ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">' + o[1] + '</button>'; }).join('') + '</div>' : '') +
+    body + '<div style="height:120px"></div></div>' + tabs('lines');
+}
+function vLyrics(id) {
+  var b = book(id); if (!b) return vAlbums();
+  var qs = quotesOf(b.id), bg = color(b);
   document.body.style.background = bg;
-  if (S.lines.book !== (id || '')) { S.lines.book = id || ''; S.lines.idx = -1; }
-  var idx = Math.min(S.lines.idx, Math.max(0, qs.length - 1));
-  var withQ = S.books.filter(function (x) { return S.quotes.some(function (q) { return q.bookId === x.id; }); }).sort(function (a, x) { return lastAct(x) > lastAct(a) ? 1 : -1; }).slice(0, 15);
+  if (S.lines.book !== id) { S.lines.book = id; S.lines.idx = -1; }
+  var idx = Math.min(S.lines.idx, qs.length - 1);
   var body = qs.length ? qs.map(function (q, i) {
-    var cur = i === idx, src = !b ? (book(q.bookId) || {}).title || '' : '';
-    var meta = '<div style="font-size:12px;font-weight:700;margin-bottom:6px;opacity:' + (cur ? '.8' : '.55') + '">' + esc([src, q.page ? q.page + '쪽' : ''].filter(Boolean).join(' · ')) + '</div>';
+    var cur = i === idx;
+    var meta = '<div style="font-size:12px;font-weight:700;margin-bottom:6px;opacity:' + (cur ? '.8' : '.55') + '">' + (q.page ? esc(q.page) + '쪽' : '') + '</div>';
     var txt = q.text ? (cur ? '<p style="font-size:22px;font-weight:800;line-height:1.55;color:#351E1C">' + esc(cleanQ(q.text)) + '</p>'
       : '<p class="clamp3" style="font-size:17px;font-weight:700;line-height:1.6;color:#5C2A1F;opacity:.85">' + esc(cleanQ(q.text)) + '</p>') : '';
     var ph = q.photoId ? '<img data-photo="' + q.photoId + '" src="' + (S.photos[q.photoId] || '') + '" style="width:' + (cur ? '100%' : '50%') + ';border-radius:12px;background:rgba(0,0,0,.12);min-height:60px;object-fit:cover;margin-top:6px">' : '';
@@ -340,10 +380,9 @@ function vLines(id) {
     return '<div data-act="lineSel" data-i="' + i + '" ' + (cur ? 'data-cur="1"' : '') + ' style="margin-bottom:' + (cur ? '34' : '24') + 'px;cursor:pointer">' + meta + txt + ph + extra + '</div>';
   }).join('') : '<p class="h900" style="color:#351E1C;font-size:22px">아직 남긴 문장이 없어요</p>';
   return '<div style="background:' + bg + ';min-height:100vh;color:#351E1C">' +
-    topbar('', '', tb('shuffle', 'shuffle', 'glass'), bg) +
-    '<h1 class="pt">' + esc(b ? b.title : '모은 문장') + ' <span style="opacity:.45">' + qs.length + '</span></h1>' +
-    '<div class="hscroll" style="padding-top:16px;padding-bottom:6px"><a class="chipT" href="#lines" style="background:' + (!b ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">전체</a>' +
-    withQ.map(function (x) { return '<a class="chipT" href="#lines/' + x.id + '" style="background:' + (b && b.id === x.id ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">' + esc(x.title) + '</a>'; }).join('') + '</div>' +
+    topbar(tb('back', 'back', 'glass'), '', tb('shuffle', 'shuffle', 'glass'), bg) +
+    '<h1 class="pt">' + esc(b.title) + ' <span style="opacity:.45">' + qs.length + '</span></h1>' +
+    '<p class="au" style="margin:6px 20px 0">' + esc(b.author) + '</p>' +
     '<section class="lines" style="padding:28px 20px 150px">' + body + '</section>' +
     '</div>' + tabs('lines');
 }
@@ -558,7 +597,15 @@ var ACT = {
   libTag: function (d) { S.lib.tag = S.lib.tag === d.tag ? '' : d.tag; render(); },
   year: function (d) { S.year = d.y; render(); },
   lineSel: function (d, el) { if (e_inBtn(el)) return; S.lines.idx = S.lines.idx === num(d.i) ? -1 : num(d.i); render(); },
-  shuffle: function () { var n = document.querySelectorAll('[data-act="lineSel"]').length; if (n) { S.lines.idx = Math.floor(Math.random() * n); render(); } },
+  shuffle: function () {
+    if (route().id) { var n = document.querySelectorAll('[data-act="lineSel"]').length; if (n) { S.lines.idx = Math.floor(Math.random() * n); render(); } return; }
+    if (S.quotes.length) { S.lines.pick = S.quotes[Math.floor(Math.random() * S.quotes.length)].id; S.lines.q = ''; render(); window.scrollTo(0, 0); }
+  },
+  linesSort: function (d) { S.lines.sort = d.s; render(); },
+  openQuote: function (d) {
+    var q = S.quotes.find(function (x) { return x.id === d.id; }); if (!q) return;
+    var qs = quotesOf(q.bookId); S.lines.book = q.bookId; S.lines.idx = qs.findIndex(function (x) { return x.id === q.id; }); go('lines/' + q.bookId);
+  },
   tagSel: function (d) { S.tagSel = d.tag; render(); },
   setStatus: function (d) {
     if (d.st !== 'done') { saveBook(d.id, { status: d.st }); return; }
@@ -744,6 +791,10 @@ document.addEventListener('submit', function (e) {
   e.preventDefault(); FORM[f.dataset.form](f);
 });
 document.addEventListener('input', function (e) {
+  if (e.target.dataset.input === 'qQ') {
+    S.lines.q = e.target.value; clearTimeout(S._qq);
+    S._qq = setTimeout(function () { var pos = e.target.selectionStart; render(); var i = document.querySelector('[data-input="qQ"]'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } }, 300);
+  }
   if (e.target.dataset.input === 'libQ') {
     S.lib.q = e.target.value; clearTimeout(S._qt);
     S._qt = setTimeout(function () { var pos = e.target.selectionStart; render(); var i = document.querySelector('[data-input="libQ"]'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } }, 250);
