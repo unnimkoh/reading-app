@@ -41,9 +41,9 @@ nav.tabs a.on{color:#fff;font-weight:700}
 .carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;height:100vh}
 .carousel::-webkit-scrollbar{display:none}
 .card{flex:0 0 100%;scroll-snap-align:start;position:relative;overflow:hidden;color:#351E1C;min-height:100vh;padding-bottom:100px}
-.card .cover{position:absolute;left:50%;top:-30px;width:62vw;max-width:290px;aspect-ratio:2/3;object-fit:cover;margin-left:-31vw;transform:rotate(-7deg);box-shadow:0 30px 60px -20px rgba(0,0,0,.5);background:#0002}
-@media(min-width:470px){.card .cover{margin-left:-145px}}
-.card:nth-child(even) .cover{transform:rotate(6deg)}
+/* 표지는 화면 안에 전부 보이게(잘리지 않게), 기울기는 살짝만 */
+.cover{display:block;margin:14px auto 0;width:min(54vw,236px);aspect-ratio:2/3;object-fit:cover;border-radius:4px;transform:rotate(-3deg);box-shadow:0 26px 50px -18px rgba(0,0,0,.5);background:#0002}
+.card:nth-child(even) .cover{transform:rotate(3deg)}
 .glass{background:rgba(255,255,255,.75);color:#351E1C}
 .scrub{height:4px;border-radius:2px;background:rgba(53,30,28,.2);position:relative}
 .scrub>i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:#351E1C}
@@ -212,9 +212,9 @@ function vReading() {
   }
   var cards = list.map(function (b, i) {
     var p = pct(b), nq = quotesOf(b.id).length;
-    return '<section class="card" style="background:' + color(b) + '">' + coverImg(b, 'cover') +
-      topbar(tb('#search', 'plus', 'glass'), '<span class="pill glass" style="height:28px;font-size:12px">읽는 중 · ' + (i + 1) + '/' + list.length + '</span>', tb('#book/' + b.id, 'menu', 'glass')) +
-      '<div style="position:relative;margin-top:min(88vw,380px);padding:0 20px">' +
+    return '<section class="card" style="background:' + color(b) + '">' +
+      topbar(tb('#search', 'plus', 'glass'), '<span class="pill glass" style="height:28px;font-size:12px">읽는 중 · ' + (i + 1) + '/' + list.length + '</span>', tb('#book/' + b.id, 'menu', 'glass')) + coverImg(b, 'cover') +
+      '<div style="position:relative;margin-top:30px;padding:0 20px">' +
       '<h1 class="bt" style="margin-right:-40px;white-space:nowrap;overflow:hidden">' + esc(b.title) + '</h1>' +
       '<p class="au ell">' + esc(b.author) + '</p>' +
       '<p class="mt row"><span style="width:12px;height:12px;border-radius:6px;background:#351E1C;margin-right:6px"></span>' + esc([b.publisher, b.pages ? b.pages + '쪽' : ''].filter(Boolean).join(' · ')) + '</p>' +
@@ -270,9 +270,8 @@ function vBook(id) {
   document.body.style.background = c;
   var stBtns = Object.keys(ST).map(function (k) { return '<button class="pill" data-act="setStatus" data-id="' + b.id + '" data-st="' + k + '" style="height:36px;font-size:12px;background:' + (b.status === k ? '#351E1C;color:#fff' : 'rgba(255,255,255,.65)') + '">' + ST[k] + '</button>'; }).join('');
   return '<div style="background:' + c + ';color:#351E1C;position:relative;overflow:hidden;min-height:100vh">' +
-    coverImg(b, 'cover', 'position:absolute;left:50%;top:-24px;width:min(62vw,260px);aspect-ratio:2/3;object-fit:cover;margin-left:-110px;transform:rotate(6deg);box-shadow:0 30px 60px -20px rgba(0,0,0,.5)') +
-    topbar(tb('back', 'back', 'glass'), '', '<button data-act="editSheet" data-id="' + b.id + '" class="pill glass" style="height:34px;font-size:12px">정보 수정</button>') +
-    '<section style="position:relative;margin-top:min(88vw,380px);padding:0 20px 28px">' +
+    topbar(tb('back', 'back', 'glass'), '', '<button data-act="editSheet" data-id="' + b.id + '" class="pill glass" style="height:34px;font-size:12px">정보 수정</button>') + coverImg(b, 'cover', 'transform:rotate(3deg)') +
+    '<section style="position:relative;margin-top:30px;padding:0 20px 28px">' +
     '<div class="row" style="gap:6px;flex-wrap:wrap">' + stBtns + '</div>' +
     '<h1 class="bt" style="margin-top:16px">' + esc(b.title) + '</h1>' +
     '<p class="au">' + esc(b.author) + '</p>' +
