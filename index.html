@@ -131,6 +131,9 @@ function starsHTML(v, size, on, off) {
 }
 function oneStar(f, size) { return '<span style="position:relative;display:inline-block;font-size:' + size + 'px;line-height:1;color:rgba(53,30,28,.22)">★<span style="position:absolute;left:0;top:0;overflow:hidden;width:' + (f * 100) + '%;color:#351E1C">★</span></span>'; }
 function rateOK(b, R) { var v = parseFloat(b.rating) || 0; if (!R) return true; if (R === 'none') return !v; if (R === 'low') return v && v <= 2.5; return v === parseFloat(R); }
+/* 문장을 읽기 좋게: 문장 끝마다 줄바꿈, 문단은 한 줄 띄움 (화면에서만, 원본은 그대로) */
+function sentLines(t) { return cleanQ(t).replace(/\r/g, '').replace(/([.!?…])(["'”’)\]]?)[ \t]+(?=\S)/g, '$1$2\n').replace(/[ \t]*\n[ \t]*/g, '\n').replace(/\n{3,}/g, '\n\n').trim(); }
+function fmtQ(t) { return esc(sentLines(t)).replace(/\n\n/g, '<span style="display:block;height:10px"></span>').replace(/\n/g, '<br>'); }
 function tagsOf(b) { return String(b.tags || '').split('|').filter(Boolean); }
 function color(b) { var c = (b && b.color || '#FF6037').toUpperCase(); return OLD[c] || c; }
 function lastAct(b) {
@@ -326,7 +329,7 @@ function quoteCard(q, c) {
   var ph = q.photoId ? '<img data-photo="' + q.photoId + '" src="' + (S.photos[q.photoId] || '') + '" style="width:100%;border-radius:10px;margin-top:6px;background:#4D2F2C;min-height:80px;object-fit:cover">' : '';
   return '<div style="padding:14px 0;border-bottom:1px solid #4D2F2C"><div class="row" style="justify-content:space-between"><span class="muted" style="font-size:12px">' + (q.page ? esc(q.page) + '쪽' : '') + '</span>' +
     '<span class="row" style="gap:14px"><button data-act="cardSave" data-id="' + q.id + '" class="muted">' + ic('share', 16) + '</button><button data-act="delQuote" data-id="' + q.id + '" class="muted">' + ic('x', 16) + '</button></span></div>' +
-    (q.text ? '<p class="kr" style="margin:6px 0 0;font-size:15px;line-height:1.7;font-weight:500">' + esc(cleanQ(q.text)) + '</p>' : '') + ph +
+    (q.text ? '<p class="kr" style="margin:6px 0 0;font-size:15px;line-height:1.7;font-weight:500">' + fmtQ(q.text) + '</p>' : '') + ph +
     (q.thought ? '<p style="margin:8px 0 0;font-size:12px;color:' + (c || '#FF6037') + '">' + esc(q.thought) + '</p>' : '') + '</div>';
 }
 
@@ -363,7 +366,7 @@ function vAlbums() {
     var hits = S.quotes.filter(function (x) { return (x.text + ' ' + x.thought).toLowerCase().indexOf(q) >= 0; }).slice(0, 100);
     body = '<h2 class="st">찾은 문장 ' + hits.length + (hits.length === 100 ? '+' : '') + '</h2><div style="padding:0 20px">' + (hits.length ? hits.map(function (x) {
       var xb = book(x.bookId) || {};
-      return '<button data-act="openQuote" data-id="' + x.id + '" style="display:block;width:100%;text-align:left;padding:14px 0;border-bottom:1px solid rgba(53,30,28,.18)"><div style="font-size:12px;font-weight:700;opacity:.65;margin-bottom:4px">' + esc([xb.title, x.page ? x.page + '쪽' : ''].filter(Boolean).join(' · ')) + '</div><p class="clamp3" style="margin:0;font-size:15px;font-weight:700;line-height:1.6">' + esc(cleanQ(x.text)) + '</p></button>';
+      return '<button data-act="openQuote" data-id="' + x.id + '" style="display:block;width:100%;text-align:left;padding:14px 0;border-bottom:1px solid rgba(53,30,28,.18)"><div style="font-size:12px;font-weight:700;opacity:.65;margin-bottom:4px">' + esc([xb.title, x.page ? x.page + '쪽' : ''].filter(Boolean).join(' · ')) + '</div><p class="clamp3" style="margin:0;font-size:15px;font-weight:700;line-height:1.6">' + fmtQ(x.text) + '</p></button>';
     }).join('') : '<p style="font-size:15px">찾는 글자가 들어간 문장이 없어요.</p>') + '</div>';
   } else {
     var nq = 0; bs.forEach(function (x) { nq += cnt[x.id]; });
@@ -375,7 +378,7 @@ function vAlbums() {
     '<div style="padding:16px 20px 0"><input class="field" data-input="qQ" value="' + esc(Lq.q || '') + '" placeholder="문장에서 찾기 (예: 원칙)" style="background:rgba(255,255,255,.6);color:#351E1C;height:46px;padding:0 16px"></div>' +
     (today && !q ? '<button data-act="openQuote" data-id="' + today.id + '" style="display:block;text-align:left;margin:20px 20px 0;width:calc(100% - 40px);border-radius:22px;background:#351E1C;color:#F5F4ED;padding:20px">' +
       '<div class="row" style="justify-content:space-between;font-size:12px;font-weight:800;color:#FF6037"><span>' + (Lq.pick ? '골라 본 문장' : '오늘의 문장') + '</span><span style="opacity:.8">' + esc(tb_.title || '') + (today.page ? ' · ' + esc(today.page) + '쪽' : '') + '</span></div>' +
-      '<p style="margin:12px 0 0;font-size:17px;font-weight:700;line-height:1.6;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">' + esc(cleanQ(today.text)) + '</p></button>' : '') +
+      '<p style="margin:12px 0 0;font-size:17px;font-weight:700;line-height:1.6;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">' + fmtQ(today.text) + '</p></button>' : '') +
     (!q ? '<div class="hscroll" style="margin-top:22px">' + [['many', '많은 순'], ['recent', '최근 남긴 순']].map(function (o) { return '<button class="chipT" data-act="linesSort" data-s="' + o[0] + '" style="background:' + (sort === o[0] ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">' + o[1] + '</button>'; }).join('') +
       '<button class="pill" data-act="linesFilter" style="height:34px;background:' + (T || Y ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>필터' + (T || Y ? ' · ' + esc([T ? (T === '__none' ? '분류 없음' : T) : '', Y].filter(Boolean).join(' · ')) : '') + '</button>' +
       (T || Y ? '<button class="chipT" data-act="linesClear" style="background:rgba(53,30,28,.1);height:36px;line-height:36px">지우기</button>' : '') + '</div>' : '') +
@@ -390,8 +393,8 @@ function vLyrics(id) {
   var body = qs.length ? qs.map(function (q, i) {
     var cur = i === idx;
     var meta = '<div style="font-size:12px;font-weight:700;margin-bottom:6px;opacity:' + (cur ? '.8' : '.55') + '">' + (q.page ? esc(q.page) + '쪽' : '') + '</div>';
-    var txt = q.text ? (cur ? '<p style="font-size:22px;font-weight:800;line-height:1.55;color:#351E1C">' + esc(cleanQ(q.text)) + '</p>'
-      : '<p class="clamp3" style="font-size:17px;font-weight:700;line-height:1.6;color:#5C2A1F;opacity:.85">' + esc(cleanQ(q.text)) + '</p>') : '';
+    var txt = q.text ? (cur ? '<p style="font-size:22px;font-weight:800;line-height:1.55;color:#351E1C">' + fmtQ(q.text) + '</p>'
+      : '<p class="clamp3" style="font-size:17px;font-weight:700;line-height:1.6;color:#5C2A1F;opacity:.85">' + fmtQ(q.text) + '</p>') : '';
     var ph = q.photoId ? '<img data-photo="' + q.photoId + '" src="' + (S.photos[q.photoId] || '') + '" style="width:' + (cur ? '100%' : '50%') + ';border-radius:12px;background:rgba(0,0,0,.12);min-height:60px;object-fit:cover;margin-top:6px">' : '';
     var extra = cur ? (q.thought ? '<p style="margin-top:12px;font-size:15px;font-weight:700;color:#351E1C;opacity:.75">' + esc(q.thought) + '</p>' : '') +
       '<div class="row" style="gap:8px;margin-top:14px"><button class="pill" style="background:#351E1C;color:#F5F4ED;height:38px" data-act="cardSave" data-id="' + q.id + '">' + ic('share', 15) + '카드로 저장</button>' +
@@ -822,7 +825,7 @@ function readBarcode(ph) {
 function cardImage(q) {
   if (!q) return;
   var b = book(q.bookId) || {}, c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
-  q = Object.assign({}, q, { text: cleanQ(q.text) });
+  q = Object.assign({}, q, { text: sentLines(q.text) });
   var x = c.getContext('2d'); x.fillStyle = color(b); x.fillRect(0, 0, 1080, 1920);
   x.fillStyle = '#351E1C'; x.font = '900 46px "Noto Sans KR"'; x.fillText(b.title || '', 96, 200);
   x.font = '500 34px "Noto Sans KR"'; x.fillText((b.author || '') + (q.page ? ' · ' + q.page + '쪽' : ''), 96, 256);
