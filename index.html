@@ -366,7 +366,7 @@ function vLines(id) {
   return id ? vLyrics(id) : vAlbums();
 }
 function dayHash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
-function vAlbums() {
+function vAlbums(onlyBody) {
   var bg = '#FF6037'; document.body.style.background = bg;
   var Lq = S.lines, q = (Lq.q || '').trim().toLowerCase(), sort = Lq.sort || 'many';
   var cnt = {}, last = {}, yc = {}, tc = {}, Y = Lq.year || '', T = Lq.tag || '';
@@ -400,17 +400,19 @@ function vAlbums() {
     var nq = 0; bs.forEach(function (x) { nq += cnt[x.id]; });
     body = '<h2 class="st">' + [T ? (T === '__none' ? '분류 없음' : T) : '', Y ? Y + '년' : ''].filter(Boolean).join(' · ') + (T || Y ? ' — ' : '') + bs.length + '권 · 문장 ' + nq + '</h2>' + grid(bs);
   }
-  return '<div style="background:' + bg + ';min-height:100vh;color:#351E1C">' +
-    topbar('', '', tb('shuffle', 'shuffle', 'glass'), bg) +
-    '<h1 class="pt">문장 <span style="opacity:.45">' + S.quotes.length + '</span></h1>' +
-    '<div style="padding:16px 20px 0"><input class="field" data-input="qQ" value="' + esc(Lq.q || '') + '" placeholder="문장에서 찾기 (예: 원칙)" style="background:rgba(255,255,255,.6);color:#351E1C;height:46px;padding:0 16px"></div>' +
-    (today && !q ? '<button data-act="openQuote" data-id="' + today.id + '" style="display:block;text-align:left;margin:20px 20px 0;width:calc(100% - 40px);border-radius:22px;background:#351E1C;color:#F5F4ED;padding:20px">' +
+  var rest = (today && !q ? '<button data-act="openQuote" data-id="' + today.id + '" style="display:block;text-align:left;margin:20px 20px 0;width:calc(100% - 40px);border-radius:22px;background:#351E1C;color:#F5F4ED;padding:20px">' +
       '<div class="row" style="justify-content:space-between;font-size:12px;font-weight:800;color:#FF6037"><span>' + (Lq.pick ? '골라 본 문장' : '오늘의 문장') + '</span><span style="opacity:.8">' + esc(tb_.title || '') + (today.page ? ' · ' + esc(today.page) + '쪽' : '') + '</span></div>' +
       '<p style="margin:12px 0 0;font-size:17px;font-weight:700;line-height:1.6;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">' + fmtQ(today.text) + '</p></button>' : '') +
     (!q ? '<div class="hscroll" style="margin-top:22px">' + [['many', '많은 순'], ['recent', '최근 남긴 순']].map(function (o) { return '<button class="chipT" data-act="linesSort" data-s="' + o[0] + '" style="background:' + (sort === o[0] ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '">' + o[1] + '</button>'; }).join('') +
       '<button class="pill" data-act="linesFilter" style="height:34px;background:' + (T || Y ? '#351E1C;color:#F5F4ED' : 'rgba(255,255,255,.55)') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>필터' + (T || Y ? ' · ' + esc([T ? (T === '__none' ? '분류 없음' : T) : '', Y].filter(Boolean).join(' · ')) : '') + '</button>' +
       (T || Y ? '<button class="chipT" data-act="linesClear" style="background:rgba(53,30,28,.1);height:36px;line-height:36px">지우기</button>' : '') + '</div>' : '') +
-    body + '<div style="height:120px"></div></div>' + tabs('lines');
+    body + '<div style="height:120px"></div>';
+  if (onlyBody) return rest;
+  return '<div style="background:' + bg + ';min-height:100vh;color:#351E1C">' +
+    topbar('', '', tb('shuffle', 'shuffle', 'glass'), bg) +
+    '<h1 class="pt">문장 <span style="opacity:.45">' + S.quotes.length + '</span></h1>' +
+    '<div style="padding:16px 20px 0"><input class="field" data-input="qQ" value="' + esc(Lq.q || '') + '" placeholder="문장에서 찾기 (예: 원칙)" style="background:rgba(255,255,255,.6);color:#351E1C;height:46px;padding:0 16px"></div>' +
+    '<div id="albBody">' + rest + '</div></div>' + tabs('lines');
 }
 function vLyrics(id) {
   var b = book(id); if (!b) return vAlbums();
@@ -929,7 +931,8 @@ document.addEventListener('submit', function (e) {
 document.addEventListener('input', function (e) {
   if (e.target.dataset.input === 'qQ') {
     S.lines.q = e.target.value; clearTimeout(S._qq);
-    S._qq = setTimeout(function () { var pos = e.target.selectionStart; render(); var i = document.querySelector('[data-input="qQ"]'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } }, 300);
+    /* 서재 찾기와 같은 이유로 입력칸은 두고 아래만 바꾼다 */
+    S._qq = setTimeout(function () { var box = document.getElementById('albBody'); if (box) box.innerHTML = vAlbums(true); else render(); }, 250);
   }
   if (e.target.dataset.input === 'libQ') {
     /* 입력칸은 그대로 두고 목록만 바꾼다 — 입력칸을 새로 그리면 한글 조합이 끊겨 자모가 갈라진다 */
