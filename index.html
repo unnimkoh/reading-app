@@ -344,7 +344,7 @@ function vBook(id) {
     (b.status === 'want' ? '<button class="pill glass" style="height:44px" data-act="toggleQueue" data-id="' + b.id + '">' + (b.queue ? '다음 읽기 ' + b.queue + '번 · 빼기' : '다음에 읽기') + '</button>' : '') +
     '<button class="pill glass" style="height:44px" data-act="colorSheet" data-id="' + b.id + '">색</button></div></section>' +
     '<section style="background:#351E1C;color:#fff;border-radius:30px 30px 0 0;padding:28px 20px 120px">' +
-    '<h2 class="st" style="margin:0 0 12px">내 메모</h2>' +
+    '<div class="row" style="justify-content:space-between;align-items:baseline;margin:0 0 12px"><h2 class="st" style="margin:0">내 메모</h2>' + (b.memo ? '<button data-act="delMemo" data-id="' + b.id + '" class="muted" style="font-size:12px;padding:6px 0 6px 12px">지우기</button>' : '') + '</div>' +
     (b.memo ? '<button data-act="editSheet" data-id="' + b.id + '" class="h900" style="text-align:left;font-size:22px;line-height:1.4;color:' + c + '">' + esc(b.memo) + '</button>' : '<button data-act="editSheet" data-id="' + b.id + '" class="muted" style="font-size:15px">+ 메모 남기기</button>') +
     '<h2 class="st" style="margin:32px 0 12px">이 책의 문장 <span class="muted">' + qs.length + '</span></h2>' +
     (qs.length ? qs.map(function (q) { return quoteCard(q, c); }).join('') : '<button data-act="quoteSheet" data-id="' + b.id + '" style="width:100%;height:56px;border-radius:14px;border:1.5px dashed #7A5A55;color:#D9CBC7;font-size:15px">아직 남긴 문장이 없어요 · 사진이나 글로 남기기</button>') +
@@ -356,7 +356,7 @@ function vBook(id) {
 function quoteCard(q, c) {
   var ph = q.photoId ? '<img data-photo="' + q.photoId + '" src="' + (S.photos[q.photoId] || '') + '" style="width:100%;border-radius:10px;margin-top:6px;background:#4D2F2C;min-height:80px;object-fit:cover">' : '';
   return '<div style="padding:14px 0;border-bottom:1px solid #4D2F2C"><div class="row" style="justify-content:space-between"><span class="muted" style="font-size:12px">' + (q.page ? esc(q.page) + '쪽' : '') + '</span>' +
-    '<span class="row" style="gap:14px"><button data-act="cardSave" data-id="' + q.id + '" class="muted">' + ic('share', 16) + '</button><button data-act="delQuote" data-id="' + q.id + '" class="muted">' + ic('x', 16) + '</button></span></div>' +
+    '<span class="row" style="gap:14px"><button data-act="cardSave" data-id="' + q.id + '" class="muted">' + ic('share', 16) + '</button><button data-act="delQuote" data-id="' + q.id + '" class="muted" style="font-size:12px">지우기</button></span></div>' +
     (q.text ? '<p class="kr" style="margin:6px 0 0;font-size:15px;line-height:1.7;font-weight:500">' + fmtQ(q.text) + '</p>' : '') + ph +
     (q.thought ? '<p style="margin:8px 0 0;font-size:12px;color:' + (c || '#FF6037') + '">' + esc(q.thought) + '</p>' : '') + '</div>';
 }
@@ -428,7 +428,8 @@ function vLyrics(id) {
     var ph = q.photoId ? '<img data-photo="' + q.photoId + '" src="' + (S.photos[q.photoId] || '') + '" style="width:' + (cur ? '100%' : '50%') + ';border-radius:12px;background:rgba(0,0,0,.12);min-height:60px;object-fit:cover;margin-top:6px">' : '';
     var extra = cur ? (q.thought ? '<p style="margin-top:12px;font-size:15px;font-weight:700;color:#351E1C;opacity:.75">' + esc(q.thought) + '</p>' : '') +
       '<div class="row" style="gap:8px;margin-top:14px"><button class="pill" style="background:#351E1C;color:#F5F4ED;height:38px" data-act="cardSave" data-id="' + q.id + '">' + ic('share', 15) + '카드로 저장</button>' +
-      '<button class="pill" style="border:1.5px solid #351E1C;height:38px" data-act="quoteSheet" data-id="' + q.bookId + '">+ 문장</button></div>' : '';
+      '<button class="pill" style="border:1.5px solid #351E1C;height:38px" data-act="quoteSheet" data-id="' + q.bookId + '">+ 문장</button>' +
+      '<button class="pill" style="height:38px;margin-left:auto;opacity:.7" data-act="delQuote" data-id="' + q.id + '">지우기</button></div>' : '';
     return '<div data-act="lineSel" data-i="' + i + '" ' + (cur ? 'data-cur="1"' : '') + ' style="margin-bottom:' + (cur ? '34' : '24') + 'px;cursor:pointer">' + meta + txt + ph + extra + '</div>';
   }).join('') : '<p class="h900" style="color:#351E1C;font-size:22px">아직 남긴 문장이 없어요</p>';
   return '<div style="background:' + bg + ';min-height:100vh;color:#351E1C">' +
@@ -727,7 +728,8 @@ var ACT = {
     saveBook(d.id, { tags: t.join('|') }).then(function () { tagSheet(d.id); });
   },
   delLog: function (d) { S.logs = S.logs.filter(function (l) { return l.id !== d.id; }); render(); call('deleteLog', d.id).catch(fail); },
-  delQuote: function (d) { confirmSheet('이 문장을 지울까요?', '지우기', function () { S.quotes = S.quotes.filter(function (q) { return q.id !== d.id; }); render(); call('deleteQuote', d.id).catch(fail); }); },
+  delMemo: function (d) { confirmSheet('메모를 지울까요?', '지우기', function () { saveBook(d.id, { memo: '' }); toast('메모를 지웠어요'); }); },
+  delQuote: function (d) { confirmSheet('이 문장을 지울까요?', '지우기', function () { S.quotes = S.quotes.filter(function (q) { return q.id !== d.id; }); render(); toast('문장을 지웠어요'); call('deleteQuote', d.id).catch(fail); }); },
   delBook: function (d) {
     var b = book(d.id), n = quotesOf(d.id).length;
     confirmSheet('「' + esc(b.title) + '」을 지울까요?' + (n ? '<br><span style="font-size:15px;font-weight:500">문장 ' + n + '개와 쪽수 기록도 함께 지워져요.</span>' : ''), '지우기', function () {
