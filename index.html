@@ -255,15 +255,39 @@ function vReading() {
 }
 
 /* 내 서재 */
-function vLibrary() {
-  var L = S.lib, cnt = {}; Object.keys(ST).forEach(function (k) { cnt[k] = S.books.filter(function (b) { return b.status === k; }).length; });
-  var list = S.books.filter(function (b) { return b.status === L.status && rateOK(b, L.rate) && (!L.tag || tagsOf(b).indexOf(L.tag) >= 0) && (!L.q || (b.title + ' ' + b.author).toLowerCase().indexOf(L.q.toLowerCase()) >= 0); });
+var CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+function choOf(s) { return s.replace(/[\uAC00-\uD7A3]/g, function (ch) { return CHO[Math.floor((ch.charCodeAt(0) - 0xAC00) / 588)]; }); }
+function libMatch(b, q) {
+  if (!q) return true;
+  var hay = b.title + ' ' + b.author, qq = q.replace(/\s+/g, '');
+  if (hay.toLowerCase().indexOf(q.toLowerCase()) >= 0) return true;
+  /* 자음만 친 경우(ㅎㄹㅁ) — 제목·저자 초성과 비교 */
+  return /^[ㄱ-ㅎ]+$/.test(qq) && choOf(hay).replace(/\s+/g, '').indexOf(qq) >= 0;
+}
+var LIB_ORDER = ['done', 'reading', 'want', 'stopped'];
+function libList() {
+  var L = S.lib;
+  var list = S.books.filter(function (b) { return b.status === L.status && rateOK(b, L.rate) && (!L.tag || tagsOf(b).indexOf(L.tag) >= 0) && libMatch(b, L.q.trim()); });
   list.sort(function (a, b) {
     if (L.sort === 'rating') return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0) || ((b.endDate || '') > (a.endDate || '') ? 1 : -1);
     if (L.status === 'done') return (b.endDate || '') > (a.endDate || '') ? 1 : -1;
     if (L.status === 'want') return (num(a.queue) || 9999) - (num(b.queue) || 9999) || ((b.addedAt > a.addedAt) ? 1 : -1);
     return lastAct(b) > lastAct(a) ? 1 : -1;
   });
+  return list;
+}
+function libItems(list) {
+  var SEL = S.sel;
+  return list.length ? list.slice(0, 300).map(function (b) {
+      var sub = (parseFloat(b.rating) ? '<span style="color:#FF6037">★' + b.rating + '</span> · ' : '') + (b.status === 'done' ? (b.endDate || '') : b.status === 'reading' ? pct(b) + '% · ' + esc(b.author) : esc(b.author));
+      var inner = coverImg(b, 'thumb') + '<div style="min-width:0;flex:1;text-align:left"><div class="ell" style="font-size:15px;font-weight:700">' + esc(b.title) + '</div><div class="ell muted" style="font-size:12px;margin-top:2px">' + (tagsOf(b).length ? esc(tagsOf(b).join(' · ')) + ' · ' : '') + sub + '</div></div>';
+      if (SEL) return '<button class="item" style="width:100%" data-act="selToggle" data-id="' + b.id + '"><span class="chk ' + (SEL[b.id] ? 'on' : '') + '">' + (SEL[b.id] ? '✓' : '') + '</span>' + inner + '</button>';
+      return '<a class="item" href="#book/' + b.id + '">' + inner + '</a>';
+    }).join('') : '<p class="muted" style="padding:20px;font-size:15px">여기에 해당하는 책이 없어요.</p>';
+}
+function vLibrary() {
+  var L = S.lib, cnt = {}; Object.keys(ST).forEach(function (k) { cnt[k] = S.books.filter(function (b) { return b.status === k; }).length; });
+  var list = libList();
   var tagTiles = S.tags.map(function (t, i) {
     var n = S.books.filter(function (b) { return tagsOf(b).indexOf(t) >= 0; }).length;
     return '<button class="tile" data-act="libTag" data-tag="' + esc(t) + '" style="background:' + (L.tag === t ? '#fff' : PAL[(i + 1) % PAL.length]) + '">' +
@@ -273,23 +297,18 @@ function vLibrary() {
   var nSel = SEL ? Object.keys(SEL).length : 0;
   return '<div>' + topbar('', '', tb('#search', 'plus', '', 'background:var(--lime);color:#351E1C')) +
     '<h1 class="pt">내 서재</h1>' +
-    '<div class="hscroll" style="margin-top:16px">' + Object.keys(ST).map(function (k) { return '<button class="chip ' + (L.status === k ? 'on' : '') + '" data-act="libStatus" data-st="' + k + '">' + ST[k] + ' <b>' + cnt[k] + '</b></button>'; }).join('') + '</div>' +
+    '<div class="hscroll" style="margin-top:16px">' + LIB_ORDER.map(function (k) { return '<button class="chip ' + (L.status === k ? 'on' : '') + '" data-act="libStatus" data-st="' + k + '">' + ST[k] + ' <b>' + cnt[k] + '</b></button>'; }).join('') + '</div>' +
     '<div class="hscroll" style="margin-top:20px">' +
     '<a class="tile" href="#lines" style="background:var(--lime)"><span class="row" style="gap:6px;font-size:12px;font-weight:800">' + ic('quote', 14) + S.quotes.length + '개</span><span class="h900" style="font-size:22px;line-height:1.15">모은 문장</span></a>' +
     tagTiles + '<a class="tile" href="#tags" style="background:#4D2F2C;color:#F5F4ED;border:1.5px dashed #7A5A55"><span class="row" style="gap:6px;font-size:12px;font-weight:800">' + ic('plus', 14) + S.tags.length + '개</span><span class="h900" style="font-size:22px;line-height:1.15">분류 관리</span></a></div>' +
     (q.length ? '<h2 class="st">다음에 읽을 책</h2><div class="hscroll">' + q.map(function (b) { return '<a href="#book/' + b.id + '" style="flex:none;width:96px"><div style="position:relative">' + coverImg(b, '', 'width:96px;height:140px;object-fit:cover;border-radius:4px') + '<span class="circle" style="position:absolute;left:6px;top:6px;width:22px;height:22px;background:#351E1C;color:#fff;font-size:12px;font-weight:800">' + b.queue + '</span></div><div class="ell" style="font-size:12px;margin-top:6px">' + esc(b.title) + '</div></a>'; }).join('') + '</div>' : '') +
-    '<div style="padding:32px 20px 4px" class="row"><h2 class="st" style="margin:0;flex:1">' + (L.tag ? esc(L.tag) + ' · ' : '') + ST[L.status] + ' ' + list.length + '</h2>' +
+    '<div style="padding:32px 20px 4px" class="row"><h2 class="st" style="margin:0;flex:1">' + (L.tag ? esc(L.tag) + ' · ' : '') + ST[L.status] + ' <span id="libCnt">' + list.length + '</span></h2>' +
     (L.tag ? '<button class="chip" data-act="libTag" data-tag="">분류 해제</button>' : '') +
     (!SEL ? '<button class="chip' + (L.rate || L.sort ? ' on' : '') + '" data-act="rateSheet" style="margin-left:6px">★ ' + (L.rate ? ({ none: '없음', low: '2.5↓' }[L.rate] || L.rate) : L.sort ? '높은 순' : '별점') + '</button>' : '') +
     (SEL ? '<button class="chip" id="selAllBtn" data-act="selAll" style="margin-left:6px">' + (nSel && nSel === list.length ? '모두 해제' : '모두 선택') + '</button><button class="chip on" data-act="selCancel" style="margin-left:6px">완료</button>'
       : (list.length ? '<button class="chip" data-act="selStart" style="margin-left:6px">선택</button>' : '')) + '</div>' +
     '<div style="padding:6px 20px"><input class="field" style="background:#4D2F2C;color:#fff;height:44px;padding:0 16px;font-size:15px" placeholder="서재에서 찾기" value="' + esc(L.q) + '" data-input="libQ"></div>' +
-    '<div>' + (list.length ? list.slice(0, 300).map(function (b) {
-      var sub = (parseFloat(b.rating) ? '<span style="color:#FF6037">★' + b.rating + '</span> · ' : '') + (b.status === 'done' ? (b.endDate || '') : b.status === 'reading' ? pct(b) + '% · ' + esc(b.author) : esc(b.author));
-      var inner = coverImg(b, 'thumb') + '<div style="min-width:0;flex:1;text-align:left"><div class="ell" style="font-size:15px;font-weight:700">' + esc(b.title) + '</div><div class="ell muted" style="font-size:12px;margin-top:2px">' + (tagsOf(b).length ? esc(tagsOf(b).join(' · ')) + ' · ' : '') + sub + '</div></div>';
-      if (SEL) return '<button class="item" style="width:100%" data-act="selToggle" data-id="' + b.id + '"><span class="chk ' + (SEL[b.id] ? 'on' : '') + '">' + (SEL[b.id] ? '✓' : '') + '</span>' + inner + '</button>';
-      return '<a class="item" href="#book/' + b.id + '">' + inner + '</a>';
-    }).join('') : '<p class="muted" style="padding:20px;font-size:15px">여기에 해당하는 책이 없어요.</p>') + '</div>' +
+    '<div id="libList">' + libItems(list) + '</div>' +
     '<div style="height:' + (SEL ? 150 : 80) + 'px"></div></div>' + (SEL ? '<div class="selbar"><b id="selN" style="flex:1;font-size:15px;padding-left:6px">' + nSel + '권 선택</b>' +
       '<button class="pill" style="height:40px;background:#fff" data-act="selTag">분류</button><button class="pill" style="height:40px;background:#fff" data-act="selStatus">상태</button>' +
       '<button class="pill" style="height:40px;background:#351E1C;color:#F5F4ED" data-act="selDelete">지우기</button></div>' : mini()) + tabs('library');
@@ -913,8 +932,14 @@ document.addEventListener('input', function (e) {
     S._qq = setTimeout(function () { var pos = e.target.selectionStart; render(); var i = document.querySelector('[data-input="qQ"]'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } }, 300);
   }
   if (e.target.dataset.input === 'libQ') {
+    /* 입력칸은 그대로 두고 목록만 바꾼다 — 입력칸을 새로 그리면 한글 조합이 끊겨 자모가 갈라진다 */
     S.lib.q = e.target.value; clearTimeout(S._qt);
-    S._qt = setTimeout(function () { var pos = e.target.selectionStart; render(); var i = document.querySelector('[data-input="libQ"]'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } }, 250);
+    S._qt = setTimeout(function () {
+      var list = libList(), box = document.getElementById('libList'), c = document.getElementById('libCnt');
+      S._libList = list.map(function (b) { return b.id; });
+      if (box) box.innerHTML = libItems(list); if (c) c.textContent = list.length;
+      if (S.sel) selPaint();
+    }, 200);
   }
 });
 
