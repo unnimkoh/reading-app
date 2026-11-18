@@ -54,6 +54,9 @@ nav.tabs a.on{color:#fff;font-weight:700}
 div.cover{width:min(54vw,236px);aspect-ratio:2/3}
 .glass{background:rgba(255,255,255,.75);color:#351E1C}
 .scrub{height:4px;border-radius:2px;background:rgba(53,30,28,.2);position:relative}
+/* 진행바를 끌어 쪽수를 바꾼다(UK 2026-11-18). 손가락이 닿는 자리는 위아래로 넓히고, 끄는 동안 카드가 옆으로 넘어가지 않게 */
+.scrub[data-scrub]{touch-action:none;cursor:pointer}.scrub[data-scrub]::before{content:'';position:absolute;left:-10px;right:-10px;top:-18px;bottom:-18px}
+.scrub.drag>b{transform:scale(1.4)}
 .scrub>i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:#351E1C}
 .scrub>b{position:absolute;top:-6px;width:16px;height:16px;margin-left:-8px;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .dots{position:fixed;left:0;right:0;bottom:calc(80px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:6px;z-index:5;pointer-events:none}
@@ -242,8 +245,8 @@ function vReading() {
       '<p class="au ell">' + esc(b.author) + '</p>' +
       '<p class="mt row"><span style="width:12px;height:12px;border-radius:6px;background:#351E1C;margin-right:6px"></span>' + esc([b.publisher, b.pages ? b.pages + '쪽' : ''].filter(Boolean).join(' · ')) + '</p>' +
       '<div class="row" style="margin-top:24px;gap:16px"><div style="flex:1">' +
-      '<div class="scrub"><i style="width:' + p + '%"></i><b style="left:' + p + '%"></b></div>' +
-      '<div style="margin-top:10px;font-size:12px;font-weight:700">' + num(b.currentPage) + ' <span style="font-weight:500;opacity:.6">/ ' + (b.pages || '?') + '쪽 · ' + p + '%</span></div></div>' +
+      '<div class="scrub"' + (num(b.pages) ? ' data-scrub="' + b.id + '"' : '') + '><i style="width:' + p + '%"></i><b style="left:' + p + '%"></b></div>' +
+      '<div class="scrubLab" style="margin-top:10px;font-size:12px;font-weight:700">' + num(b.currentPage) + ' <span style="font-weight:500;opacity:.6">/ ' + (b.pages || '?') + '쪽 · ' + p + '%</span></div></div>' +
       '<button data-act="quoteSheet" data-id="' + b.id + '" class="circle" style="width:72px;height:72px;background:#fff;color:#351E1C;box-shadow:0 8px 20px -8px rgba(0,0,0,.35)">' + ic('quote', 30) + '</button></div>' +
       '<div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">' +
       '<button class="pill glass" data-act="pageSheet" data-id="' + b.id + '">+ 쪽수</button>' +
@@ -947,6 +950,35 @@ document.addEventListener('input', function (e) {
     }, 200);
   }
 });
+
+/* 읽는 중 카드 진행바 끌기 — 놓으면 그 쪽수로 기록한다(+ 쪽수 저장과 같은 addLog) */
+(function () {
+  var D = null;
+  function at(e) {
+    var r = D.el.getBoundingClientRect(), x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    D.page = Math.round(x * D.max);
+    var q = Math.round(D.page / D.max * 100);
+    D.el.firstChild.style.width = q + '%'; D.el.lastChild.style.left = q + '%';
+    if (D.lab) D.lab.innerHTML = D.page + ' <span style="font-weight:500;opacity:.6">/ ' + D.max + '쪽 · ' + q + '%</span>';
+  }
+  document.addEventListener('pointerdown', function (e) {
+    var el = e.target.closest('[data-scrub]'); if (!el) return;
+    var b = book(el.dataset.scrub); if (!b || !num(b.pages)) return;
+    e.preventDefault();
+    D = { el: el, b: b, max: num(b.pages), from: num(b.currentPage), page: num(b.currentPage), lab: el.parentNode.querySelector('.scrubLab') };
+    try { el.setPointerCapture(e.pointerId); } catch (x) {}
+    el.classList.add('drag'); at(e);
+  });
+  document.addEventListener('pointermove', function (e) { if (D) { e.preventDefault(); at(e); } });
+  function end() {
+    if (!D) return; var d = D; D = null; d.el.classList.remove('drag');
+    if (d.page === d.from) return;
+    var b = d.b, p = d.page; b.currentPage = String(p); render(); toast(p + '쪽으로 기록했어요');
+    call('addLog', { bookId: b.id, page: p }).then(function (r) { S.logs.push(r.log); replace(S.books, r.book); render(); if (p >= num(b.pages) && r.book.status !== 'done') askDone(r.book); }).catch(fail);
+  }
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', function () { if (D) { D.el.classList.remove('drag'); D = null; render(); } });
+})();
 
 function load(all) { S.books = all.books; S.logs = all.logs; S.quotes = all.quotes; S.tags = all.tags; S.today = all.today; S.loaded = true; }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
